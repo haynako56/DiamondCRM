@@ -379,18 +379,28 @@ class JobsController extends Controller
         $bandWidth = $lineItem->getMetaValue('Band Width');
         $stoneType = $lineItem->getMetaValue('Stone Type');
         $cert      = $lineItem->getMetaValue('Certificate Number');
+        $vid       = $lineItem->getMetaValue('Certificate Url');
+        $symmetry  = $lineItem->getMetaValue('Symmetry');
+        $cut       = $lineItem->getMetaValue('Cut Grade');
+        $polish    = $lineItem->getMetaValue('Polish');
+        $measurements= $lineItem->getMetaValue('Measurements');
 
         if (!$metal && !$carat && !$ringSize) return null;
 
         return array_filter([
-            'material'  => $metal,
-            'size'      => $ringSize,
             'bandWidth' => $bandWidth,
-            'stoneType' => $stoneType,
             'carat'     => $carat,
-            'clarity'   => $clarity,
             'colour'    => $colour,
+            'polish'    => $polish,
+            'stoneType' => $stoneType,
+            'ringSize'  => $ringSize,
+            'measurements' => $measurements,
+            'cut'       => $cut,
+            'clarity'   => $clarity,
+            'symmetry'  => $symmetry,
+            'material'  => $metal,
             'cert'      => $cert,
+            'vid'       => $vid,
         ]);
     }
 }

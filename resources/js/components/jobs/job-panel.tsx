@@ -654,14 +654,52 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
                     {job.stone_data && Object.keys(job.stone_data).length > 0 && (
                         <section>
                             <h3 className="text-xs font-semibold text-ink-soft uppercase tracking-wider mb-3 pb-2 border-b border-border">Product Spec</h3>
-                            <div className="bg-surface-2 rounded p-3 space-y-1 text-xs">
-                                {Object.entries(job.stone_data).map(([key, value]) => (
-                                    <div key={key} className="flex justify-between pb-1 border-b border-border last:border-0">
-                                        <span className="text-ink-soft capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
-                                        <span className="font-medium text-gold-dark">{String(value)}</span>
+                            <div className="bg-surface-2 rounded p-3 text-xs">
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                    {Object.entries(job.stone_data)
+                                        .filter(([key]) => key !== 'cert' && key !== 'vid' && key !== 'measurements')
+                                        .map(([key, value]) => (
+                                            <div key={key} className="flex justify-between pb-1 border-b border-border">
+                                                <span className="text-ink-soft capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
+                                                <span className="font-medium text-gold-dark">{String(value)}</span>
+                                            </div>
+                                        ))
+                                    }
+                                </div>
+                                {/* Measurements spans full width */}
+                                {job.stone_data.measurements && (
+                                    <div className="flex justify-between pt-1 mt-1 border-t border-border">
+                                        <span className="text-ink-soft">Measurements</span>
+                                        <span className="font-medium text-gold-dark">{String(job.stone_data.measurements)}</span>
                                     </div>
-                                ))}
+                                )}
                             </div>
+
+                            {/* Cert and Video buttons */}
+                            {(job.stone_data.cert || job.stone_data.vid) && (
+                                <div className="flex gap-2 mt-3">
+                                    {job.stone_data.cert && (
+                                        <a
+                                            href={String(job.stone_data.cert)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex-1 text-xs px-3 py-2 border border-border rounded hover:!border-gold transition-colors font-medium flex items-center justify-center gap-1"
+                                        >
+                                            📄 Certificate
+                                        </a>
+                                    )}
+                                    {job.stone_data.vid && (
+                                        <a
+                                            href={String(job.stone_data.vid)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex-1 text-xs px-3 py-2 border border-border rounded hover:!border-gold transition-colors font-medium flex items-center justify-center gap-1"
+                                        >
+                                            ▶ 360° Video
+                                        </a>
+                                    )}
+                                </div>
+                            )}
                         </section>
                     )}
 
