@@ -545,7 +545,7 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
 
     return (
         <>
-            <div className="w-96 bg-white border-l border-border overflow-y-auto shadow-lg">
+            <div className="w-96 bg-white border-l border-border overflow-y-auto shadow-lg self-stretch min-h-0">
                 <div className="sticky top-0 bg-white border-b border-border p-5 flex items-start justify-between">
                     <div>
                         <div className="text-xs text-ink-soft uppercase tracking-widest">Order {job.woo_id} · {job.job_id}</div>

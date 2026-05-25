@@ -1,85 +1,118 @@
-import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid, Package, Calendar, BarChart3, Settings } from 'lucide-react';
-import AppLogo from '@/components/app-logo';
-import { NavFooter } from '@/components/nav-footer';
-import { NavMain } from '@/components/nav-main';
-import { NavUser } from '@/components/nav-user';
+import { Link, usePage } from '@inertiajs/react';
 import {
     Sidebar,
     SidebarContent,
-    SidebarFooter,
     SidebarHeader,
     SidebarMenu,
+    SidebarMenuBadge,
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
-    // {
-    //     title: 'Dashboard',
-    //     href: dashboard(),
-    //     icon: LayoutGrid,
-    // },
-    {
-        title: 'Orders',
-        href: '/jobs',
-        icon: Package,
-    },
-    {
-        title: 'Due Dates',
-        href: '/jobs/due-dates',
-        icon: Calendar,
-    },
-    {
-        title: 'Reports',
-        href: '/jobs/reports',
-        icon: BarChart3,
-    },
-    {
-        title: 'Settings',
-        href: '/jobs/settings',
-        icon: Settings,
-    },
+const navItems = [
+    { label: 'Orders',    href: '/jobs',          icon: '◆', badge: true  },
+    { label: 'Due Dates', href: '/jobs/due-dates',       icon: '⏱', badge: false },
+    { label: 'Reports',   href: '/jobs/reports',   icon: '⊙', badge: false },
+    { label: 'Settings',  href: '/jobs/settings',  icon: '⊚', badge: false },
 ];
 
-const footerNavItems: NavItem[] = [
-    // {
-    //     title: 'Repository',
-    //     href: 'https://github.com/laravel/react-starter-kit',
-    //     icon: FolderGit2,
-    // },
-    // {
-    //     title: 'Documentation',
-    //     href: 'https://laravel.com/docs/starter-kits#react',
-    //     icon: BookOpen,
-    // },
-];
+export function AppSidebar({ stats }: { stats?: { active?: number } }) {
+    const { url } = usePage();
 
-export function AppSidebar() {
+    const isActive = (href: string) => {
+        if (href === '/jobs') return url === '/jobs' || url.startsWith('/jobs?');
+        return url.startsWith(href);
+    };
+
     return (
-        <Sidebar collapsible="icon" variant="inset">
-            <SidebarHeader>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
-                                <AppLogo />
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
+        <Sidebar collapsible="offcanvas" className="border-r-0" style={{ backgroundColor: 'var(--ink)', width: '220px' }}>
+
+            {/* Logo */}
+            <SidebarHeader style={{ padding: '28px 20px 20px' }}>
+                <div>
+                    <div style={{
+                        fontFamily: 'Cormorant Garamond, serif',
+                        fontSize: '20px',
+                        fontWeight: 500,
+                        color: 'var(--gold-light)',
+                        lineHeight: 1.2,
+                        marginBottom: '4px',
+                    }}>
+                        Diamond Gallery
+                    </div>
+                    <div style={{
+                        fontSize: '9px',
+                        letterSpacing: '0.2em',
+                        textTransform: 'uppercase',
+                        color: 'var(--menu)',
+                    }}>
+                        Order Management
+                    </div>
+                </div>
             </SidebarHeader>
 
-            <SidebarContent>
-                <NavMain items={mainNavItems} />
-            </SidebarContent>
+            {/* Nav */}
+            <SidebarContent style={{ padding: '8px 12px' }}>
+                <SidebarMenu>
+                    {navItems.map((item) => {
+                        const active = isActive(item.href);
 
-            <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
-                <NavUser />
-            </SidebarFooter>
+                        return (
+                            <SidebarMenuItem key={item.label}>
+                                <SidebarMenuButton
+                                    asChild
+                                    isActive={active}
+                                    className="relative"
+                                    style={{
+                                        backgroundColor: active ? 'var(--menu-bg)' : 'transparent',
+                                        color:           active ? 'var(--gold-light)' : 'var(--menu)',
+                                        borderRadius:    '8px',
+                                        padding:         '10px 12px',
+                                        fontSize:        '13px',
+                                        fontWeight:      active ? 500 : 400,
+                                        transition:      'all 0.15s',
+                                    }}
+                                >
+                                    <Link href={item.href}>
+                                        <span style={{ fontSize: '14px', marginRight: '10px' }}>{item.icon}</span>
+                                        <span>{item.label}</span>
+
+                                        {/* Active left bar indicator */}
+                                        {active && (
+                                            <span style={{
+                                                position:        'absolute',
+                                                left:            '-12px',
+                                                top:             '50%',
+                                                transform:       'translateY(-50%)',
+                                                width:           '3px',
+                                                height:          '60%',
+                                                backgroundColor: 'var(--gold)',
+                                                borderRadius:    '0 2px 2px 0',
+                                            }} />
+                                        )}
+                                    </Link>
+                                </SidebarMenuButton>
+
+                                {/* Active jobs badge */}
+                                {item.badge && stats?.active !== undefined && stats.active > 0 && (
+                                    <SidebarMenuBadge style={{
+                                        backgroundColor: 'var(--gold)',
+                                        color:           'white',
+                                        fontSize:        '10px',
+                                        fontWeight:      600,
+                                        borderRadius:    '20px',
+                                        padding:         '0 7px',
+                                        minWidth:        '20px',
+                                        height:          '20px',
+                                    }}>
+                                        {stats.active}
+                                    </SidebarMenuBadge>
+                                )}
+                            </SidebarMenuItem>
+                        );
+                    })}
+                </SidebarMenu>
+            </SidebarContent>
         </Sidebar>
     );
 }

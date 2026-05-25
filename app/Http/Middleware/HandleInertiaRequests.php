@@ -33,15 +33,27 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array<string, mixed>
      */
+    // public function share(Request $request): array
+    // {
+    //     return [
+    //         ...parent::share($request),
+    //         'name' => config('app.name'),
+    //         'auth' => [
+    //             'user' => $request->user(),
+    //         ],
+    //         'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+    //     ];
+    // }
+
     public function share(Request $request): array
     {
         return [
             ...parent::share($request),
-            'name' => config('app.name'),
-            'auth' => [
-                'user' => $request->user(),
+            'sidebar_stats' => [
+                'active' => \App\Models\Order::where('status', '!=', 'completed')
+                                            ->where('status', '!=', 'checkout-draft')
+                                            ->count(),
             ],
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }
 }

@@ -26,6 +26,8 @@
   --red-bg: #FDEAEA;
   --purple: #4A3A9A;
   --purple-bg: #F0EDFB;
+  --menu: #ffffff80;
+  --menu-bg:#b8953f14;
 }
 
 * {
@@ -58,6 +60,8 @@ h1, h2, h3, h4, h5, h6 {
 .text-ink-mid { color: var(--ink-mid); }
 .text-ink-soft { color: var(--ink-soft); }
 .bg-ink { background-color: var(--ink); }
+.menu-color { color: var(--menu); }
+.menu-active { background-color: var(--menu-bg); color: var(--gold-light); }
 
 .bg-surface { background-color: var(--surface); }
 .bg-surface-2 { background-color: var(--surface-2); }
