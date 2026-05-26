@@ -320,6 +320,51 @@ class JobsController extends Controller
         ]);
     }
 
+    public function completed(): Response
+    {
+        $orders = Order::with('lineItems', 'tasks')
+            ->where('status', 'completed')
+            ->latest('woocommerce_created_at')
+            ->paginate(20);
+ 
+        $reportJobs = $orders->getCollection()->map(function (Order $order) {
+            $firstLineItem = $order->lineItems->first();
+ 
+            return [
+                'id'      => $order->dg_order_code ?? 'DG-' . str_pad($order->id, 3, '0', STR_PAD_LEFT),
+                'woo_id'  => $order->is_manual ? 'Manual' : '#' . $order->woocommerce_order_id,
+                'client'  => $order->customerFullName(),
+                'product' => $order->is_manual
+                    ? ($order->product_name ?? '')
+                    : ($firstLineItem?->product_name ?? $order->product_name ?? ''),
+                'due'     => $order->order_due_date?->format('d M Y') ?? '—',
+                'balance' => $order->amount_owing,
+                'notes'   => $order->notes ?? '',
+                'status'  => $order->status,
+                'woo_id'  => $order->is_manual ? 'Manual' : '#' . $order->woocommerce_order_id,
+            ];
+        });
+ 
+        $stats = [
+            'total_completed'  => Order::where('status', 'completed')->count(),
+            'total_value'      => Order::where('status', 'completed')->sum('total'),
+            'total_collected'  => Order::where('status', 'completed')->sum('amount_paid'),
+        ];
+ 
+        return Inertia::render('jobs/completed', [
+            'jobs'       => $reportJobs,
+            'stats'      => $stats,
+            'pagination' => [
+                'current_page' => $orders->currentPage(),
+                'last_page'    => $orders->lastPage(),
+                'per_page'     => $orders->perPage(),
+                'total'        => $orders->total(),
+                'from'         => $orders->firstItem(),
+                'to'           => $orders->lastItem(),
+            ],
+        ]);
+    }
+
     public function updateProductionCategory(Order $order, Request $request): RedirectResponse
     {
         $request->validate([

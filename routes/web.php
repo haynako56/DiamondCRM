@@ -35,7 +35,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/jobs/settings/team',             [SettingsController::class, 'saveTeam'])->name('settings.team.save');
 
     Route::post('/jobs/sync', [JobsController::class, 'sync'])->name('jobs.sync');
-
+    Route::get('/jobs/completed', [JobsController::class, 'completed'])->name('jobs.completed');
 
 });
 

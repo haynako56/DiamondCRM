@@ -13,7 +13,9 @@ const navItems = [
     { label: 'Orders',    href: '/jobs',          icon: '◈', badge: true  },
     { label: 'Due Dates', href: '/jobs/due-dates',       icon: '◷', badge: false },
     { label: 'Reports',   href: '/jobs/reports',   icon: '◎', badge: false },
+    { label: 'Completed', href: '/jobs/completed', icon: '✓', badge: false },
     { label: 'Settings',  href: '/jobs/settings',  icon: '◉', badge: false },
+
 ];
 
 export function AppSidebar({ stats }: { stats?: { active?: number } }) {
