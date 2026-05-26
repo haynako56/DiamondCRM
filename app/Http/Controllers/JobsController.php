@@ -164,6 +164,8 @@ class JobsController extends Controller
             'amount_paid'  => 'sometimes|nullable|numeric|min:0',
             'payment_plan' => 'sometimes|nullable|string|max:255',
             'payment_note' => 'sometimes|nullable|string',
+            'status'       => 'sometimes|string|in:processing,completed,on-hold,cancelled',
+            'due_date' => 'sometimes|nullable|date',
         ]);
  
         // Save notes only
@@ -195,6 +197,22 @@ class JobsController extends Controller
 
             return back();
         }
+
+        if ($request->has('status') && !$request->has('client')) {
+            $order->update(['status' => $request->status]);
+
+            Inertia::flash('toast', ['type' => 'success', 'message' => __('Order Completed.')]);
+
+            return back();
+        }
+
+        if ($request->has('due_date') && !$request->has('client')) {
+            $order->update(['order_due_date' => $request->due_date]);
+
+            Inertia::flash('toast', ['type' => 'success', 'message' => __('Due Date Updated.')]);
+
+            return back();
+        }
  
         // Save order details
         $billing = $order->billing ?? [];
@@ -218,7 +236,32 @@ class JobsController extends Controller
 
     public function due(): Response
     {
-        return Inertia::render('jobs/due', []);
+        $orders = Order::with('lineItems', 'tasks')
+            ->where('status', '!=', 'checkout-draft')
+            ->where('status', '!=', 'completed')
+            ->whereNotNull('order_due_date')
+            ->orderBy('order_due_date', 'asc')
+            ->get();
+ 
+        $jobs = $orders->map(function (Order $order) {
+            $firstLineItem = $order->lineItems->first();
+            $pendingTask   = $order->tasks->where('is_done', false)->first();
+ 
+            return [
+                'id'      => $order->dg_order_code ?? 'DG-' . str_pad($order->id, 3, '0', STR_PAD_LEFT),
+                'client'  => $order->customerFullName(),
+                'product' => $order->is_manual
+                    ? ($order->product_name ?? '')
+                    : ($firstLineItem?->product_name ?? $order->product_name ?? ''),
+                'due'     => $order->order_due_date->toDateString(),
+                'stage'   => $pendingTask?->label ?? 'Complete',
+                'balance' => $order->amount_owing,
+            ];
+        });
+ 
+        return Inertia::render('jobs/due', [
+            'jobs' => $jobs,
+        ]);
     }
 
     public function reports(Request $request): Response

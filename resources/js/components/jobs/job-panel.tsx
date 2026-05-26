@@ -513,6 +513,8 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
     const [productionCategory, setProductionCategory]       = useState(job.production_category ?? 'cad_casting');
     const [paymentNote, setPaymentNote] = useState(job.payment_note ?? '');
 
+    const [dueDate, setDueDate] = useState(job.due_date ? job.due_date.substring(0, 10) : '');
+
     const [savedDetails, setSavedDetails] = useState({
         client:  job.client,
         product: job.product,
@@ -520,6 +522,8 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
         phone:   job.phone,
         address: job.address,
     });
+
+    const [isCompleted, setIsCompleted] = useState(job.completed ?? false);
 
     const [savedPayment, setSavedPayment] = useState({
         price:        job.price,
@@ -573,9 +577,28 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
                                 <span className="text-ink-soft">Order date</span>
                                 <span className="font-medium">{new Date(job.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                             </div>
-                            <div className="flex justify-between info-row">
-                                <span className="text-ink-soft">Due Date</span>
-                                <span className="font-medium">{new Date(job.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                            <div className="flex justify-between items-center info-row">
+                                <span className="text-ink-soft">Due date</span>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="date"
+                                        value={dueDate}
+                                        onChange={(e) => {
+                                            setDueDate(e.target.value);
+                                            router.patch(`/orders/${job.id}`, { due_date: e.target.value }, {
+                                                preserveScroll: true,
+                                                preserveState:  true,
+                                            });
+                                        }}
+                                        className="text-xs border border-border rounded px-2 py-1"
+                                        style={{ marginBottom: 0 }}
+                                    />
+                                    {dueDate && (
+                                        <span className="text-xs text-ink-soft whitespace-nowrap">
+                                            {new Date(dueDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-ink-soft">Status</span>
@@ -741,10 +764,24 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
                             <button className="flex-1 text-xs px-3 py-1 border border-border rounded hover:!border-gold transition-colors font-medium flex items-center justify-center gap-1">
                                 📋 Report
                             </button>
-                            {!job.completed && (
-                                <button className="flex-1 text-xs px-3 py-1 bg-gold text-white rounded hover:!bg-gold-dark transition-colors font-medium flex items-center justify-center gap-1">
+                            {!isCompleted && (
+                                <button
+                                    onClick={() => {
+                                        setIsCompleted(true);
+                                        router.patch(`/orders/${job.id}`, { status: 'completed' }, {
+                                            preserveScroll: true,
+                                            preserveState:  true,
+                                        });
+                                    }}
+                                    className="flex-1 text-xs px-3 py-1 bg-gold text-white rounded hover:!bg-gold-dark transition-colors font-medium flex items-center justify-center gap-1"
+                                >
                                     ✓ Complete
                                 </button>
+                            )}
+                            {isCompleted && (
+                                <span className="flex-1 text-xs px-3 py-1 bg-green-100 text-green-700 rounded font-medium flex items-center justify-center gap-1">
+                                    ✓ Completed
+                                </span>
                             )}
                         </div>
                     </section>
