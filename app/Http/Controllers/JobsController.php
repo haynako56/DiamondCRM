@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use App\Services\WooCommerceService;
 use App\Models\OrderLineItem;
+use App\Models\WooCommerceSetting;
 
 class JobsController extends Controller
 {
@@ -307,6 +308,7 @@ class JobsController extends Controller
         return Inertia::render('jobs/reports', [
             'jobs'  => $reportJobs,
             'stats' => $stats,
+            'daniele_email' => WooCommerceSetting::first()?->production_email ?? '',
             'pagination' => [
                 'current_page' => $paginated->currentPage(),
                 'last_page'    => $paginated->lastPage(),

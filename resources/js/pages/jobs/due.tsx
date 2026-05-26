@@ -14,12 +14,50 @@ interface Props {
 }
 
 export default function DueDates({ jobs }: Props) {
+
+    const sendMondayReport = () => {
+        const date = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+        let report = `DIAMOND GALLERY — DUE DATES REPORT\n`;
+        report    += `${date}\n`;
+        report    += `${'─'.repeat(40)}\n\n`;
+
+        if (jobs.length === 0) {
+            report += 'No upcoming due dates.\n';
+        } else {
+            jobs.forEach((job) => {
+                const due       = new Date(job.due);
+                const today     = new Date();
+                today.setHours(0, 0, 0, 0);
+                const daysUntil = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                const dueLabel  = daysUntil < 0
+                    ? `${Math.abs(daysUntil)}d overdue`
+                    : daysUntil === 0
+                    ? 'Due today'
+                    : `In ${daysUntil}d`;
+
+                const dueFormatted = due.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+
+                report += `${job.id} — ${job.client}\n`;
+                report += `  Product:  ${job.product}\n`;
+                report += `  Stage:    ${job.stage}\n`;
+                report += `  Due:      ${dueFormatted} (${dueLabel})\n`;
+                report += `  Balance:  ${job.balance > 0 ? '$' + job.balance.toLocaleString() + ' owing' : '✓ Paid'}\n`;
+                report += `\n`;
+            });
+        }
+
+        const subject = encodeURIComponent(`Diamond Gallery — Due Dates Report — ${new Date().toLocaleDateString('en-AU')}`);
+        const body    = encodeURIComponent(report);
+
+        window.open(`mailto:?subject=${subject}&body=${body}`);
+    };
     return (
         <>
             <Head title="Due Dates" />
             <div className="topbar">
                 <h1 className="topbar-title">Due Dates</h1>
-                <button className="btn btn-gold">✉ Monday report</button>
+                <button onClick={sendMondayReport} className="btn btn-gold">✉ Monday report</button>
             </div>
 
             <div className="content-scroll">

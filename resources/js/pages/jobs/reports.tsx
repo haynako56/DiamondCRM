@@ -30,12 +30,53 @@ interface Pagination {
 }
 
 interface Props {
-    jobs:       ReportJob[];
-    stats:      Stats;
-    pagination: Pagination;
+    jobs:          ReportJob[];
+    stats:         Stats;
+    pagination:    Pagination;
+    daniele_email: string;
 }
 
-export default function Reports({ jobs, stats, pagination }: Props) {
+export default function Reports({ jobs, stats, pagination, daniele_email }: Props) {
+
+    const sendToDaniele = () => {
+        const date = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+        let report = `DIAMOND GALLERY — WEEKLY STATUS REPORT\n`;
+        report    += `${date}\n`;
+        report    += `${'─'.repeat(40)}\n\n`;
+
+        // Summary stats
+        report += `SUMMARY\n`;
+        report += `  Total order value: $${stats.total_order_value.toLocaleString()}\n`;
+        report += `  Collected:         $${stats.collected.toLocaleString()}\n`;
+        report += `  Outstanding:       $${stats.outstanding.toLocaleString()}\n`;
+        report += `  Active jobs:       ${stats.active_jobs}\n\n`;
+
+        report += `${'─'.repeat(40)}\n\n`;
+
+        // All jobs
+        if (jobs.length === 0) {
+            report += 'No active orders.\n';
+        } else {
+            report += `ACTIVE ORDERS\n\n`;
+            jobs.forEach((job) => {
+                report += `${job.id} — ${job.client}\n`;
+                report += `  Order:    ${job.woo_id}\n`;
+                report += `  Product:  ${job.product}\n`;
+                report += `  Stage:    ${job.stage}\n`;
+                report += `  Due:      ${job.due || '—'}\n`;
+                report += `  Balance:  ${job.balance > 0 ? '$' + job.balance.toLocaleString() + ' owing' : '✓ Paid'}\n`;
+                if (job.notes) report += `  Notes:    ${job.notes}\n`;
+                report += `\n`;
+            });
+        }
+
+        const danieleEmail = daniele_email ?? '';
+        const subject      = encodeURIComponent(`Diamond Gallery — Weekly Report — ${new Date().toLocaleDateString('en-AU')}`);
+        const body         = encodeURIComponent(report);
+
+        window.open(`mailto:${danieleEmail}?subject=${subject}&body=${body}`);
+    };
     const statCards = [
         { label: 'Total order value', value: `$${stats.total_order_value.toLocaleString()}`, gold: true,  danger: false },
         { label: 'Collected',         value: `$${stats.collected.toLocaleString()}`,         gold: false, danger: false },
@@ -54,7 +95,7 @@ export default function Reports({ jobs, stats, pagination }: Props) {
             <Head title="Reports" />
             <div className="topbar">
                 <h1 className="topbar-title">Weekly Report</h1>
-                <button className="btn btn-gold">✉ Send to Daniele</button>
+                <button onClick={sendToDaniele} className="btn btn-gold">✉ Send to Daniele</button>
             </div>
 
             <div className="content-scroll">

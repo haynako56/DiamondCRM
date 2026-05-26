@@ -513,8 +513,6 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
     const [productionCategory, setProductionCategory]       = useState(job.production_category ?? 'cad_casting');
     const [paymentNote, setPaymentNote] = useState(job.payment_note ?? '');
 
-    const [dueDate, setDueDate] = useState(job.due_date ? job.due_date.substring(0, 10) : '');
-
     const [savedDetails, setSavedDetails] = useState({
         client:  job.client,
         product: job.product,
@@ -524,6 +522,7 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
     });
 
     const [isCompleted, setIsCompleted] = useState(job.completed ?? false);
+    const [dueDate, setDueDate]           = useState(job.due_date ? job.due_date.substring(0, 10) : '');
 
     const [savedPayment, setSavedPayment] = useState({
         price:        job.price,
@@ -545,6 +544,79 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
     const handleNotesSaved = (updatedNote: string) => {
         setJobNotes(updatedNote);
         if (onJobNotesUpdated) onJobNotesUpdated(job.id, updatedNote);
+    };
+
+    const sendJobReport = () => {
+        const date    = new Date().toLocaleDateString('en-AU');
+        const owing   = Math.max(0, Number(savedPayment.price) - Number(savedPayment.amount_paid));
+
+        // Product details
+        let report = `DIAMOND GALLERY — JOB REPORT\n`;
+        report    += `${date}\n`;
+        report    += `${'─'.repeat(40)}\n\n`;
+
+        report += `JOB DETAILS\n`;
+        report += `Order:   ${job.woo_id} · ${job.job_id}\n`;
+        report += `Client:  ${savedDetails.client}\n`;
+        report += `Email:   ${savedDetails.email}\n`;
+        report += `Phone:   ${savedDetails.phone}\n`;
+        report += `Address: ${savedDetails.address}\n`;
+        if (dueDate) report += `Due:     ${new Date(dueDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}\n`;
+        report += `\n`;
+
+        // Product details
+        report += `PRODUCT\n`;
+        report += `${savedDetails.product}\n`;
+        if (job.stone_data && Object.keys(job.stone_data).length > 0) {
+            Object.entries(job.stone_data)
+                .filter(([key]) => key !== 'cert' && key !== 'vid')
+                .forEach(([key, value]) => {
+                    const label = key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ');
+                    report += `  ${label.charAt(0).toUpperCase() + label.slice(1)}: ${value}\n`;
+                });
+        }
+        report += `\n`;
+
+        // Payment
+        report += `PAYMENT\n`;
+        report += `Total:  $${Number(savedPayment.price).toLocaleString()}\n`;
+        report += `Paid:   $${Number(savedPayment.amount_paid).toLocaleString()}\n`;
+        report += `Owing:  $${owing.toLocaleString()}\n`;
+        if (paymentNote) report += `Note:   ${paymentNote}\n`;
+        report += `\n`;
+
+        // Production tasks
+        report += `PRODUCTION TASKS (${productionCategory.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())})\n`;
+        (tasks as any[]).forEach((task) => {
+            const status = task.is_done ? `✓ Done${task.task_date ? ' — ' + task.task_date : ''}` : '○ Pending';
+            report += `  ${task.label}: ${status}\n`;
+            if (task.note) report += `    Note: ${task.note}\n`;
+        });
+        report += `\n`;
+
+        // Job notes
+        if (jobNotes) {
+            report += `NOTES\n${jobNotes}\n`;
+        }
+
+        const subject = encodeURIComponent(`Diamond Gallery — Job Report ${job.job_id} · ${savedDetails.client} · ${date}`);
+        const body    = encodeURIComponent(report);
+
+        window.open(`mailto:?subject=${subject}&body=${body}`);
+    };
+
+    const emailClient = () => {
+        const firstName = savedDetails.client.split(' ')[0];
+        const subject   = encodeURIComponent(`Update on your Diamond Gallery order — ${job.job_id}`);
+        const body      = encodeURIComponent(
+            `Hi ${firstName},\n\n` +
+            `I wanted to update you on your order ${job.job_id}.\n\n` +
+            `${savedDetails.product ? 'Product: ' + savedDetails.product + '\n' : ''}` +
+            (dueDate ? `Due date: ${new Date(dueDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}\n` : '') +
+            `\nKind regards,\nDiamond Gallery`
+        );
+
+        window.open(`mailto:${savedDetails.email}?subject=${subject}&body=${body}`);
     };
 
     return (
@@ -577,28 +649,9 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
                                 <span className="text-ink-soft">Order date</span>
                                 <span className="font-medium">{new Date(job.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                             </div>
-                            <div className="flex justify-between items-center info-row">
-                                <span className="text-ink-soft">Due date</span>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="date"
-                                        value={dueDate}
-                                        onChange={(e) => {
-                                            setDueDate(e.target.value);
-                                            router.patch(`/orders/${job.id}`, { due_date: e.target.value }, {
-                                                preserveScroll: true,
-                                                preserveState:  true,
-                                            });
-                                        }}
-                                        className="text-xs border border-border rounded px-2 py-1"
-                                        style={{ marginBottom: 0 }}
-                                    />
-                                    {dueDate && (
-                                        <span className="text-xs text-ink-soft whitespace-nowrap">
-                                            {new Date(dueDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
-                                        </span>
-                                    )}
-                                </div>
+                            <div className="flex justify-between info-row">
+                                <span className="text-ink-soft">Due Date</span>
+                                <span className="font-medium">{new Date(job.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-ink-soft">Status</span>
@@ -758,10 +811,16 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
                     <section>
                         <h3 className="text-xs font-semibold text-ink-soft uppercase tracking-wider mb-3 pb-2 border-b border-border">Actions</h3>
                         <div className="flex gap-2">
-                            <button className="flex-1 text-xs px-3 py-1 border border-border rounded hover:!border-gold transition-colors font-medium flex items-center justify-center gap-1">
+                            <button
+                                onClick={emailClient}
+                                className="flex-1 text-xs px-3 py-1 border border-border rounded hover:!border-gold transition-colors font-medium flex items-center justify-center gap-1"
+                            >
                                 ✉ Email client
                             </button>
-                            <button className="flex-1 text-xs px-3 py-1 border border-border rounded hover:!border-gold transition-colors font-medium flex items-center justify-center gap-1">
+                            <button
+                                onClick={sendJobReport}
+                                className="flex-1 text-xs px-3 py-1 border border-border rounded hover:!border-gold transition-colors font-medium flex items-center justify-center gap-1"
+                            >
                                 📋 Report
                             </button>
                             {!isCompleted && (
