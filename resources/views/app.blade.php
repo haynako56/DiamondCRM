@@ -37,7 +37,8 @@
         @fonts
         @routes
         @viteReactRefresh
-        @vite(['resources/css/app.css', 'resources/css/diamond-gallery.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
+        <link rel="stylesheet" href="/css/diamond-gallery.css">
+        @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         <x-inertia::head>
             <title>{{ config('app.name', 'Laravel') }}</title>
         </x-inertia::head>
