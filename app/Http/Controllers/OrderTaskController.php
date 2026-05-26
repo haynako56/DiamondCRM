@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderTask;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class OrderTaskController extends Controller
 {
@@ -27,6 +28,8 @@ class OrderTaskController extends Controller
             'progress',
             'tracking_ref',
         ]));
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Order Task Updated.')]);
 
         return back();
     }
@@ -50,6 +53,8 @@ class OrderTaskController extends Controller
             'is_custom'  => true,
         ]);
 
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('New Task Created.')]);
+
         return back();
     }
 
@@ -59,6 +64,8 @@ class OrderTaskController extends Controller
         abort_unless($task->is_custom, 403, 'Only custom tasks can be deleted.');
 
         $task->delete();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Task Deleted.')]);
 
         return back();
     }

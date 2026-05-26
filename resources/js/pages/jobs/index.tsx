@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import JobsList from '@/components/jobs/jobs-list';
 import JobPanel from '@/components/jobs/job-panel';
@@ -10,6 +10,7 @@ export default function JobsIndex({ jobs, stats }) {
     const [expandedCards, setExpandedCards] = useState(new Set());
     const [isModalOpen, setIsModalOpen]     = useState(false);
     const [noteUpdates, setNoteUpdates]     = useState<Record<number, string>>({});
+    const [isSyncing, setIsSyncing]         = useState(false);
 
     const toggleCard = (jobId) => {
         setExpandedCards((prev) => {
@@ -22,6 +23,14 @@ export default function JobsIndex({ jobs, stats }) {
 
     const handleJobNotesUpdated = (jobId: number, note: string) => {
         setNoteUpdates((prev) => ({ ...prev, [jobId]: note }));
+    };
+
+    const handleSync = () => {
+        setIsSyncing(true);
+        router.post('/jobs/sync', {}, {
+            onSuccess: () => setIsSyncing(false),
+            onError:   () => setIsSyncing(false),
+        });
     };
 
     const jobsWithUpdatedNotes = jobs.map((job) => ({
@@ -39,8 +48,12 @@ export default function JobsIndex({ jobs, stats }) {
                     <div className="bg-white border-b border-border px-6 h-14 flex items-center justify-between flex-shrink-0">
                         <h1 className="font-serif text-xl font-medium">All Orders</h1>
                         <div className="flex gap-2">
-                            <button className="text-xs px-3 py-1.5 border border-border rounded hover:!border-gold transition-colors">
-                                ⟳ Sync WooCommerce
+                            <button
+                                onClick={handleSync}
+                                disabled={isSyncing}
+                                className="text-xs px-3 py-1.5 border border-border rounded hover:!border-gold transition-colors disabled:opacity-50"
+                            >
+                                {isSyncing ? 'Syncing…' : '⟳ Sync WooCommerce'}
                             </button>
                             <button
                                 onClick={() => setIsModalOpen(true)}

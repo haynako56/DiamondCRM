@@ -146,6 +146,8 @@ class JobsController extends Controller
 
         $order->createDefaultTasks($productionMethod);
 
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('New Order Created.')]);
+
         return back();
     }
 
@@ -167,6 +169,9 @@ class JobsController extends Controller
         // Save notes only
         if ($request->has('notes') && !$request->has('client') && !$request->has('price')) {
             $order->update(['notes' => $request->notes]);
+
+            Inertia::flash('toast', ['type' => 'success', 'message' => __('Order Note Updated.')]);
+
             return back();
         }
  
@@ -176,12 +181,18 @@ class JobsController extends Controller
                 'total'       => $request->price ?? $order->total,
                 'amount_paid' => $request->amount_paid ?? $order->amount_paid,
             ]);
+
+            Inertia::flash('toast', ['type' => 'success', 'message' => __('Payment Updated.')]);
+
             return back();
         }
 
         // Save payment note only
         if ($request->has('payment_note') && !$request->has('client') && !$request->has('price')) {
             $order->update(['payment_note' => $request->payment_note]);
+
+            Inertia::flash('toast', ['type' => 'success', 'message' => __('Payment Note Updated.')]);
+
             return back();
         }
  
@@ -200,6 +211,8 @@ class JobsController extends Controller
             'product_name' => $request->product,
         ]);
  
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Order Details Updated.')]);
+
         return back();
     }
 
@@ -289,6 +302,8 @@ class JobsController extends Controller
             $this->saveOrUpdateOrder($wooCommerceOrder);
         }
  
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('WooCommerce Sync Complete.')]);
+
         return back();
     }
 

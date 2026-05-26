@@ -43,7 +43,7 @@ class OrderTaskDefinitions
     private static function handmadeTasks(): array
     {
         return [
-            ['key' => 'production', 'label' => 'Production — Daniele', 'description' => 'Ring is being handmade by Daniele.'],
+            ['key' => 'production', 'label' => 'Production — Daniele', 'description' => 'In-house production and setting.'],
             ['key' => 'dispatch',   'label' => 'Dispatch to client',   'description' => 'Send with tracking or arrange pickup.'],
         ];
     }
@@ -51,8 +51,8 @@ class OrderTaskDefinitions
     private static function supplierProductTasks(): array
     {
         return [
-            ['key' => 'supplier_order',     'label' => 'Order from supplier',  'description' => 'Place the order with the supplier.'],
-            ['key' => 'delivery_confirmed', 'label' => 'Delivery confirmed',   'description' => 'Confirm delivery received from supplier.'],
+            ['key' => 'supplier_order',     'label' => 'Order from supplier',  'description' => 'Place order and confirm ETA.'],
+            ['key' => 'delivery_confirmed', 'label' => 'Delivery confirmed',   'description' => 'Mark when item arrives in store.'],
             ['key' => 'dispatch',           'label' => 'Dispatch to client',   'description' => 'Send with tracking or arrange pickup.'],
         ];
     }

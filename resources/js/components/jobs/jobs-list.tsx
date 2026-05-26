@@ -11,6 +11,10 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
         setJobNotes((prev) => ({ ...prev, [jobId]: note }));
     };
 
+    const [paymentNotes, setPaymentNotes] = useState<Record<number, string>>(
+        Object.fromEntries(jobs.map((job) => [job.id, job.payment_note ?? '']))
+    );
+
     const needsAction = (job) => {
         const steps = Object.values(job.tasks ?? []) as any[];
         return steps.some((task) => !task.is_done) && !job.completed;
@@ -108,6 +112,7 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                         const doneTasks    = steps.filter((s) => s.done);
                         const badge        = paymentBadge(job);
                         const currentNote  = jobNotes[job.id] ?? '';
+                        const currentPaymentNote = paymentNotes[job.id] ?? '';
 
                         return (
                             <div key={job.id} className="bg-white border border-border rounded-lg p-4 cursor-pointer hover:border-gold transition-all">
@@ -141,7 +146,7 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                                     <div className="flex items-center justify-between gap-2 flex-wrap">
                                         <div className="flex gap-1 flex-wrap text-xs">
                                             {steps.map((step) => (
-                                                <span key={step.id} className={`px-2 py-1 rounded border ${step.done ? 'step-active font-semibold' : 'bg-gray-100 text-gray-600 border-gray-300'}`}>
+                                                <span key={step.id} className={`px-2 py-1 rounded border ${step.done ? 'step-active font-semibold' : 'bg-surface-2 text-gray-600 border-border'}`}>
                                                     {step.done ? '●' : '○'} {step.label}
                                                 </span>
                                             ))}
@@ -153,6 +158,11 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                                     {currentNote && (
                                         <div className="mt-3 text-xs p-2 bg-gold-pale border border-gold-light rounded text-ink-mid line-clamp-2">
                                             {currentNote}
+                                        </div>
+                                    )}
+                                    {/* Payment Note — shown below pipeline if exists */}
+                                    {currentPaymentNote && (
+                                        <div className="mt-3 text-xs p-2 pyb rounded text-amber-800 line-clamp-2">💬 { currentPaymentNote}
                                         </div>
                                     )}
                                 </div>

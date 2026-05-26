@@ -28,6 +28,7 @@
   --purple-bg: #F0EDFB;
   --menu: #ffffff80;
   --menu-bg:#b8953f14;
+  --payment-note-border: #A0BFE0;
 }
 
 * {
@@ -66,6 +67,7 @@ h1, h2, h3, h4, h5, h6 {
 .bg-surface { background-color: var(--surface); }
 .bg-surface-2 { background-color: var(--surface-2); }
 .border-border { border-color: var(--border); }
+.pyb { border: 1px solid var(--payment-note-border); color: var(--ink-mid)}
 
 .badge-ring { background-color: var(--purple-bg); color: var(--purple); }
 .badge-jewellery { background-color: var(--green-bg); color: var(--green); }
