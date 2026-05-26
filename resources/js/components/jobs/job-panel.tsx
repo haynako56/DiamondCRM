@@ -649,9 +649,27 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
                                 <span className="text-ink-soft">Order date</span>
                                 <span className="font-medium">{new Date(job.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                             </div>
-                            <div className="flex justify-between info-row">
-                                <span className="text-ink-soft">Due Date</span>
-                                <span className="font-medium">{new Date(job.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                            <div className="flex justify-between items-center info-row">
+                                <span className="text-ink-soft">Due date</span>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="date"
+                                        value={dueDate}
+                                        onChange={(e) => {
+                                            setDueDate(e.target.value);
+                                            router.patch(`/orders/${job.id}`, { due_date: e.target.value }, {
+                                                preserveScroll: true,
+                                                preserveState:  true,
+                                            });
+                                        }}
+                                        style={{ marginBottom: 0, fontSize: '12px', padding: '3px 6px', border: '1px solid var(--border)', borderRadius: '6px', width: 'auto' }}
+                                    />
+                                    {dueDate && (
+                                        <span className="text-xs text-ink-soft whitespace-nowrap">
+                                            {new Date(dueDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-ink-soft">Status</span>
