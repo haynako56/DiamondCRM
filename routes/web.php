@@ -5,6 +5,7 @@ use Laravel\Fortify\Features;
 use App\Http\Controllers\OrderTaskController;
 use App\Http\Controllers\JobsController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\UsersController;
 
 
 Route::inertia('/', 'welcome', [
@@ -36,6 +37,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('/jobs/sync', [JobsController::class, 'sync'])->name('jobs.sync');
     Route::get('/jobs/completed', [JobsController::class, 'completed'])->name('jobs.completed');
+
+    Route::get('/settings/users',       [UsersController::class, 'index'])->name('settings.users');
+    Route::post('/settings/users',      [UsersController::class, 'store'])->name('settings.users.store');
+    Route::delete('/settings/users/{user}', [UsersController::class, 'destroy'])->name('settings.users.destroy');
 
 });
 

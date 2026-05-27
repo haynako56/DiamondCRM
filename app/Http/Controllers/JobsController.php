@@ -390,6 +390,11 @@ class JobsController extends Controller
         $wooCommerceOrders  = $wooCommerceService->getAllOrders();
  
         foreach ($wooCommerceOrders as $wooCommerceOrder) {
+            // Skip completed orders — no need to sync them
+            if ($wooCommerceOrder['status'] === 'completed') {
+                continue;
+            }
+
             $this->saveOrUpdateOrder($wooCommerceOrder);
         }
  

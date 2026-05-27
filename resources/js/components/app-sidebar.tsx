@@ -1,4 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
+import { BookOpen, FolderGit2, LayoutGrid, Package, Calendar, BarChart3, Settings, User } from 'lucide-react';
 import {
     Sidebar,
     SidebarContent,
@@ -15,7 +16,8 @@ const navItems = [
     { label: 'Reports',   href: '/jobs/reports',   icon: '◎', badge: false },
     { label: 'Completed', href: '/jobs/completed', icon: '✓', badge: false },
     { label: 'Settings',  href: '/jobs/settings',  icon: '◉', badge: false },
-
+    { label: 'Profile',  href: '/settings/profile',  icon: '◉', badge: false },
+    { label: 'Users', href: '/settings/users', icon: '◉', badge: false },
 ];
 
 export function AppSidebar({ stats }: { stats?: { active?: number } }) {

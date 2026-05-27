@@ -49,6 +49,9 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
+            'auth' => [
+                'user' => $request->user(),
+            ],
             'sidebar_stats' => [
                 'active' => \App\Models\Order::where('status', '!=', 'completed')
                                             ->where('status', '!=', 'checkout-draft')
