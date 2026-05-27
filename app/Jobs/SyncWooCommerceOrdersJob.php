@@ -1,51 +1,37 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Jobs;
 
 use App\Models\Order;
 use App\Models\OrderLineItem;
 use App\Services\WooCommerceService;
-use Illuminate\Console\Command;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
-class SyncWooCommerceOrdersCommand extends Command
+class SyncWooCommerceOrdersJob implements ShouldQueue
 {
-    protected $signature   = 'woocommerce:sync-orders';
-    protected $description = 'Fetch all orders from WooCommerce and save them to the database.';
+    use Queueable;
 
     public function handle(WooCommerceService $wooCommerceService): void
     {
-        $this->info('Syncing WooCommerce orders...');
-
         $wooCommerceOrders = $wooCommerceService->getAllOrders();
 
-        $synced = 0;
-        $created = 0;
-
         foreach ($wooCommerceOrders as $wooCommerceOrder) {
-            // Skip completed orders
-            if ($wooCommerceOrder['status'] === 'completed') {
-                continue;
-            }
-
-            $this->saveOrUpdateOrder($wooCommerceOrder, $created);
-            $synced++;
+            $this->saveOrUpdateOrder($wooCommerceOrder);
         }
 
-        Log::info('WooCommerce orders synced via cron.', [
-            'total_synced'  => $synced,
-            'total_created' => $created,
+        Log::info('WooCommerce orders synced successfully.', [
+            'total_orders' => count($wooCommerceOrders),
         ]);
-
-        $this->info("Done. {$synced} orders synced, {$created} new orders created.");
     }
 
-    private function saveOrUpdateOrder(array $wooCommerceOrder, int &$created): void
+    private function saveOrUpdateOrder(array $wooCommerceOrder): void
     {
         $existingOrder = Order::where('woocommerce_order_id', $wooCommerceOrder['id'])->first();
 
         if ($existingOrder) {
-            // Order already exists — update data only, never touch tasks
+            // Order already exists — just update the data, don't touch tasks
             $existingOrder->update([
                 'status'                 => $wooCommerceOrder['status'],
                 'currency'               => $wooCommerceOrder['currency'],
@@ -79,18 +65,18 @@ class SyncWooCommerceOrdersCommand extends Command
             'shipping'               => $wooCommerceOrder['shipping'],
             'date_paid'              => $wooCommerceOrder['date_paid'],
             'woocommerce_created_at' => $wooCommerceOrder['date_created'],
-            'order_due_date'         => \Carbon\Carbon::parse($wooCommerceOrder['date_created'])->addWeeks(4),
-            'dg_order_code'          => 'DG-' . str_pad(Order::max('id') + 1, 5, '0', STR_PAD_LEFT),
-            'production_category'    => 'cad_casting',
         ]);
 
         $this->saveOrUpdateLineItems($newOrder, $wooCommerceOrder['line_items']);
 
-        $newOrder->update(['product_name' => $newOrder->lineItems()->first()?->product_name]);
-
+        // Default to cad_casting — can be changed per order in the UI later
         $newOrder->createDefaultTasks('cad_casting');
+        // $newOrder->createDefaultTasks('handmade');
+        // $newOrder->createDefaultTasks('supplier_product');
 
-        $created++;
+        Log::info("Created new order with default tasks.", [
+            'woocommerce_order_id' => $newOrder->woocommerce_order_id,
+        ]);
     }
 
     private function saveOrUpdateLineItems(Order $order, array $lineItems): void

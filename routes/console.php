@@ -8,8 +8,8 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Artisan::command('woocommerce:sync-orders', function () {
-    \App\Jobs\SyncWooCommerceOrdersJob::dispatch();
-})->describe('Fetch all orders from WooCommerce and save them to the database.');
+// Artisan::command('woocommerce:sync-orders', function () {
+//     \App\Jobs\SyncWooCommerceOrdersJob::dispatch();
+// })->describe('Fetch all orders from WooCommerce and save them to the database.');
 
 Schedule::command('woocommerce:sync-orders')->hourly();
