@@ -56,6 +56,7 @@ h1, h2, h3, h4, h5, h6 {
 .bg-gold { background-color: var(--gold); }
 .bg-gold-pale { background-color: var(--gold-pale); }
 .border-gold { border-color: var(--gold); }
+.border-gold-light { border-color: var(--gold-light); }
 
 .text-ink { color: var(--ink); }
 .text-ink-mid { color: var(--ink-mid); }

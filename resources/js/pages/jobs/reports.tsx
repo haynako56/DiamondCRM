@@ -154,7 +154,15 @@ export default function Reports({ jobs, stats, pagination, daniele_email }: Prop
                                             <td className="px-4 py-3 font-medium">{job.client}</td>
                                             <td className="px-4 py-3 text-ink-mid max-w-[180px] truncate">{job.product}</td>
                                             <td className="px-4 py-3 text-ink-mid">{job.stage}</td>
-                                            <td className="px-4 py-3 whitespace-nowrap">{job.due}</td>
+                                            <td
+                                                className="px-4 py-3 whitespace-nowrap font-medium"
+                                                style={{
+                                                    backgroundColor: job.due && new Date(job.due) < new Date() ? 'var(--amber-bg)' : 'var(--green-bg)',
+                                                    color:           job.due && new Date(job.due) < new Date() ? 'var(--amber)'    : 'var(--green)',
+                                                }}
+                                            >
+                                                {job.due}
+                                            </td>
                                             <td className={`px-4 py-3 font-medium text-right ${job.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
                                                 ${job.balance.toLocaleString()}
                                             </td>

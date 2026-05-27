@@ -270,7 +270,7 @@ class JobsController extends Controller
         $perPage = 20;
  
         // Stats are calculated across ALL orders — not just the current page
-        $allOrders = Order::where('status', '!=', 'checkout-draft')->get();
+        $allOrders = Order::where('status', '!=', 'completed')->get();
  
         $stats = [
             'total_order_value' => $allOrders->sum('total'),
@@ -282,6 +282,7 @@ class JobsController extends Controller
         // Paginate the orders for the table
         $paginated = Order::with('lineItems', 'tasks')
             ->where('status', '!=', 'checkout-draft')
+            ->where('status', '!=', 'completed') 
             ->latest('woocommerce_created_at')
             ->paginate($perPage);
  
@@ -437,6 +438,7 @@ class JobsController extends Controller
             'date_paid'              => $wooCommerceOrder['date_paid'],
             'woocommerce_created_at' => $wooCommerceOrder['date_created'],
             'dg_order_code'          => 'DG-' . str_pad(Order::max('id') + 1, 5, '0', STR_PAD_LEFT),
+            'order_due_date'         => \Carbon\Carbon::parse($wooCommerceOrder['date_created'])->addWeeks(4),
             'production_category'    => 'cad_casting',
         ]);
  
@@ -475,37 +477,43 @@ class JobsController extends Controller
     private function buildStoneData($lineItem): ?array
     {
         if (!$lineItem) return null;
-
-        $metal     = $lineItem->getMetaValue('Metal') ?? $lineItem->getMetaValue('Material');
-        $carat     = $lineItem->getMetaValue('Carat');
-        $clarity   = $lineItem->getMetaValue('Clarity');
-        $colour    = $lineItem->getMetaValue('Colour');
-        $ringSize  = $lineItem->getMetaValue('Ring Size');
-        $bandWidth = $lineItem->getMetaValue('Band Width');
-        $stoneType = $lineItem->getMetaValue('Stone Type');
-        $cert      = $lineItem->getMetaValue('Certificate Number');
-        $vid       = $lineItem->getMetaValue('Certificate Url');
-        $symmetry  = $lineItem->getMetaValue('Symmetry');
-        $cut       = $lineItem->getMetaValue('Cut Grade');
-        $polish    = $lineItem->getMetaValue('Polish');
-        $measurements= $lineItem->getMetaValue('Measurements');
-
+ 
+        $metal        = $lineItem->getMetaValue('Metal') ?? $lineItem->getMetaValue('Material');
+        $carat        = $lineItem->getMetaValue('Carat');
+        $clarity      = $lineItem->getMetaValue('Clarity');
+        $colour       = $lineItem->getMetaValue('Colour');
+        $ringSize     = $lineItem->getMetaValue('Ring Size');
+        $bandWidth    = $lineItem->getMetaValue('Band Width');
+        $stoneType    = $lineItem->getMetaValue('Stone Type');
+        $cert         = $lineItem->getMetaValue('Certificate Number');
+        $vid          = $lineItem->getMetaValue('Certificate Url');
+        $symmetry     = $lineItem->getMetaValue('Symmetry');
+        $cut          = $lineItem->getMetaValue('Cut Grade');
+        $polish       = $lineItem->getMetaValue('Polish');
+        $measurements = $lineItem->getMetaValue('Measurements');
+ 
         if (!$metal && !$carat && !$ringSize) return null;
-
+ 
+        // If Certificate Number is a URL use it as a clickable link (cert)
+        // otherwise display it as plain text (certificateNumber)
+        $certIsUrl = $cert && filter_var($cert, FILTER_VALIDATE_URL);
+ 
         return array_filter([
-            'bandWidth' => $bandWidth,
-            'carat'     => $carat,
-            'colour'    => $colour,
-            'polish'    => $polish,
-            'stoneType' => $stoneType,
-            'ringSize'  => $ringSize,
-            'measurements' => $measurements,
-            'cut'       => $cut,
-            'clarity'   => $clarity,
-            'symmetry'  => $symmetry,
-            'material'  => $metal,
-            'cert'      => $cert,
-            'vid'       => $vid,
+            'bandWidth'         => $bandWidth,
+            'carat'             => $carat,
+            'colour'            => $colour,
+            'polish'            => $polish,
+            'stoneType'         => $stoneType,
+            'ringSize'          => $ringSize,
+            'measurements'      => $measurements,
+            'cut'               => $cut,
+            'clarity'           => $clarity,
+            'symmetry'          => $symmetry,
+            'material'          => $metal,
+            'cert'              => $certIsUrl ? $cert : null,
+            'certificateNumber' => !$certIsUrl ? $cert : null,
+            'vid'               => $vid,
         ]);
     }
+
 }

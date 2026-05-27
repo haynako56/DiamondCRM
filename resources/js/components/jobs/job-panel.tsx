@@ -762,38 +762,38 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
                                 </div>
                                 {/* Measurements spans full width */}
                                 {job.stone_data.measurements && (
-                                    <div className="flex justify-between pt-1 mt-1 border-t border-border">
+                                    <div className="flex justify-between pt-1 pb-2 mt-1 border-b border-border">
                                         <span className="text-ink-soft">Measurements</span>
                                         <span className="font-medium text-gold-dark">{String(job.stone_data.measurements)}</span>
                                     </div>
                                 )}
-                            </div>
 
-                            {/* Cert and Video buttons */}
-                            {(job.stone_data.cert || job.stone_data.vid) && (
-                                <div className="flex gap-2 mt-3">
-                                    {job.stone_data.cert && (
-                                        <a
-                                            href={String(job.stone_data.cert)}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex-1 text-xs px-3 py-2 border border-border rounded hover:!border-gold transition-colors font-medium flex items-center justify-center gap-1"
-                                        >
-                                            📄 Certificate
-                                        </a>
-                                    )}
-                                    {job.stone_data.vid && (
-                                        <a
-                                            href={String(job.stone_data.vid)}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex-1 text-xs px-3 py-2 border border-border rounded hover:!border-gold transition-colors font-medium flex items-center justify-center gap-1"
-                                        >
-                                            ▶ 360° Video
-                                        </a>
-                                    )}
-                                </div>
-                            )}
+                                {/* Cert and Video buttons */}
+                                {(job.stone_data.cert || job.stone_data.vid) && (
+                                    <div className="flex gap-2 mt-3">
+                                        {job.stone_data.cert && (
+                                            <a
+                                                href={String(job.stone_data.cert)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex-1 text-xs px-3 py-2 border border-gold-light rounded bg-gold-pale hover:!border-gold transition-colors font-medium flex items-center justify-center gap-1"
+                                            >
+                                                📄 Certificate
+                                            </a>
+                                        )}
+                                        {job.stone_data.vid && (
+                                            <a
+                                                href={String(job.stone_data.vid)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex-1 text-xs px-3 py-2 border border-gold-light rounded bg-gold-pale hover:!border-gold transition-colors font-medium flex items-center justify-center gap-1"
+                                            >
+                                                ▶ 360° Video
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </section>
                     )}
 
