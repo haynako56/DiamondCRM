@@ -24,7 +24,7 @@ class SyncWooCommerceOrdersCommand extends Command
 
         foreach ($wooCommerceOrders as $wooCommerceOrder) {
             // Skip completed orders
-            if ($wooCommerceOrder['status'] === 'completed') {
+            if ($wooCommerceOrder['status'] === 'completed' || $wooCommerceOrder['status'] === 'checkout-draft' || $wooCommerceOrder['status'] === 'cancelled' || $wooCommerceOrder['status'] === 'failed' || $wooCommerceOrder['status'] === 'pending') {
                 continue;
             }
 
@@ -47,7 +47,6 @@ class SyncWooCommerceOrdersCommand extends Command
         if ($existingOrder) {
             // Order already exists — update data only, never touch tasks
             $existingOrder->update([
-                'status'                 => $wooCommerceOrder['status'],
                 'currency'               => $wooCommerceOrder['currency'],
                 'total'                  => $wooCommerceOrder['total'],
                 'amount_paid'            => $wooCommerceOrder['date_paid'] ? $wooCommerceOrder['total'] : 0,

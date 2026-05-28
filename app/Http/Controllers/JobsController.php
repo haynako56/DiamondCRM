@@ -388,10 +388,10 @@ class JobsController extends Controller
     {
         $wooCommerceService = new WooCommerceService();
         $wooCommerceOrders  = $wooCommerceService->getAllOrders();
- 
+        // dd($wooCommerceOrders);
         foreach ($wooCommerceOrders as $wooCommerceOrder) {
             // Skip completed orders — no need to sync them
-            if ($wooCommerceOrder['status'] === 'completed') {
+            if ($wooCommerceOrder['status'] === 'completed' || $wooCommerceOrder['status'] === 'checkout-draft' || $wooCommerceOrder['status'] === 'cancelled' || $wooCommerceOrder['status'] === 'failed' || $wooCommerceOrder['status'] === 'pending') {
                 continue;
             }
 
@@ -406,11 +406,10 @@ class JobsController extends Controller
     private function saveOrUpdateOrder(array $wooCommerceOrder): void
     {
         $existingOrder = Order::where('woocommerce_order_id', $wooCommerceOrder['id'])->first();
- 
+
         if ($existingOrder) {
             // Order already exists — update data only, never touch tasks
             $existingOrder->update([
-                'status'                 => $wooCommerceOrder['status'],
                 'currency'               => $wooCommerceOrder['currency'],
                 'total'                  => $wooCommerceOrder['total'],
                 'amount_paid'            => $wooCommerceOrder['date_paid'] ? $wooCommerceOrder['total'] : 0,
@@ -422,7 +421,7 @@ class JobsController extends Controller
                 'date_paid'              => $wooCommerceOrder['date_paid'],
                 'woocommerce_created_at' => $wooCommerceOrder['date_created'],
             ]);
- 
+
             $this->saveOrUpdateLineItems($existingOrder, $wooCommerceOrder['line_items']);
  
             return;
