@@ -43,13 +43,14 @@ class SyncWooCommerceOrdersCommand extends Command
     private function saveOrUpdateOrder(array $wooCommerceOrder, int &$created): void
     {
         $existingOrder = Order::where('woocommerce_order_id', $wooCommerceOrder['id'])->first();
+        $payment       = $this->resolvePaymentFromMeta($wooCommerceOrder);
 
         if ($existingOrder) {
             // Order already exists — update data only, never touch tasks
             $existingOrder->update([
                 'currency'               => $wooCommerceOrder['currency'],
-                'total'                  => $wooCommerceOrder['total'],
-                'amount_paid'            => $wooCommerceOrder['date_paid'] ? $wooCommerceOrder['total'] : 0,
+                'total'                  => $payment['total'],
+                'amount_paid'            => $payment['amount_paid'],
                 'payment_method'         => $wooCommerceOrder['payment_method'],
                 'payment_method_title'   => $wooCommerceOrder['payment_method_title'],
                 'transaction_id'         => $wooCommerceOrder['transaction_id'] ?? null,
@@ -57,6 +58,7 @@ class SyncWooCommerceOrdersCommand extends Command
                 'shipping'               => $wooCommerceOrder['shipping'],
                 'date_paid'              => $wooCommerceOrder['date_paid'],
                 'woocommerce_created_at' => $wooCommerceOrder['date_created'],
+                'meta_data'              => $wooCommerceOrder['meta_data'] ?? null,
             ]);
 
             $this->saveOrUpdateLineItems($existingOrder, $wooCommerceOrder['line_items']);
@@ -69,8 +71,8 @@ class SyncWooCommerceOrdersCommand extends Command
             'woocommerce_order_id'   => $wooCommerceOrder['id'],
             'status'                 => $wooCommerceOrder['status'],
             'currency'               => $wooCommerceOrder['currency'],
-            'total'                  => $wooCommerceOrder['total'],
-            'amount_paid'            => $wooCommerceOrder['date_paid'] ? $wooCommerceOrder['total'] : 0,
+            'total'                  => $payment['total'],
+            'amount_paid'            => $payment['amount_paid'],
             'payment_method'         => $wooCommerceOrder['payment_method'],
             'payment_method_title'   => $wooCommerceOrder['payment_method_title'],
             'transaction_id'         => $wooCommerceOrder['transaction_id'] ?? null,
@@ -81,6 +83,7 @@ class SyncWooCommerceOrdersCommand extends Command
             'order_due_date'         => \Carbon\Carbon::parse($wooCommerceOrder['date_created'])->addWeeks(4),
             'dg_order_code'          => 'DG-' . str_pad(Order::max('id') + 1, 5, '0', STR_PAD_LEFT),
             'production_category'    => 'cad_casting',
+            'meta_data'              => $wooCommerceOrder['meta_data'] ?? null,
         ]);
 
         $this->saveOrUpdateLineItems($newOrder, $wooCommerceOrder['line_items']);
@@ -90,6 +93,26 @@ class SyncWooCommerceOrdersCommand extends Command
         $newOrder->createDefaultTasks('cad_casting');
 
         $created++;
+    }
+
+    private function resolvePaymentFromMeta(array $wooCommerceOrder): array
+    {
+        $metaData      = $wooCommerceOrder['meta_data'] ?? [];
+        $getMeta       = fn(string $key) => collect($metaData)->firstWhere('key', $key)['value'] ?? null;
+        $balanceAmount = $getMeta('_balance_amount');
+        $hasBalance    = $balanceAmount !== null || $getMeta('_balance_order_id') !== null;
+
+        $total      = (float) $wooCommerceOrder['total'];
+        $amountPaid = $wooCommerceOrder['date_paid'] ? $total : 0.0;
+
+        if ($hasBalance && $balanceAmount !== null) {
+            $total += (float) $balanceAmount;
+            if ($getMeta('_balance_paid') === 'yes') {
+                $amountPaid += (float) $balanceAmount;
+            }
+        }
+
+        return ['total' => $total, 'amount_paid' => $amountPaid];
     }
 
     private function saveOrUpdateLineItems(Order $order, array $lineItems): void

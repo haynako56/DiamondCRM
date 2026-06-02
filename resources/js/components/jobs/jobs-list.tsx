@@ -20,7 +20,22 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
         return steps.some((task) => !task.is_done) && !job.completed;
     };
 
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const matchesSearch = (job: any) => {
+        if (!searchQuery) return true;
+        const query = searchQuery.toLowerCase();
+        return (
+            job.client?.toLowerCase().includes(query) ||
+            job.product?.toLowerCase().includes(query) ||
+            job.job_id?.toLowerCase().includes(query) ||
+            job.woo_id?.toLowerCase().includes(query) ||
+            job.email?.toLowerCase().includes(query)
+        );
+    };
+
     const filteredJobs = jobs.filter((job) => {
+        if (!matchesSearch(job)) return false;
         if (currentFilter === 'all')        return !job.completed;
         if (currentFilter === 'ring')       return job.type === 'ring' && !job.completed;
         if (currentFilter === 'jewellery')  return job.type === 'jewellery' && !job.completed;
@@ -81,21 +96,30 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
             )}
 
             {/* Filter Bar */}
-            <div className="flex gap-2 flex-wrap items-center">
-                <span className="text-xs text-ink-soft">Show:</span>
-                {['all', 'ring', 'jewellery', 'action', 'completed'].map((filter) => (
-                    <button
-                        key={filter}
-                        onClick={() => setCurrentFilter(filter)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
-                            currentFilter === filter
-                                ? 'bg-gold text-white border-gold'
-                                : 'bg-white border-border text-ink-mid hover:!border-gold'
-                        }`}
-                    >
-                        {filter === 'all' ? 'All' : filter === 'ring' ? 'Rings' : filter === 'jewellery' ? 'Jewellery' : filter === 'action' ? 'Needs action' : 'Completed'}
-                    </button>
-                ))}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap items-center">
+                    <span className="text-xs text-ink-soft">Show:</span>
+                    {['all', 'ring', 'jewellery', 'action', 'completed'].map((filter) => (
+                        <button
+                            key={filter}
+                            onClick={() => setCurrentFilter(filter)}
+                            className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+                                currentFilter === filter
+                                    ? 'bg-gold text-white border-gold'
+                                    : 'bg-white border-border text-ink-mid hover:!border-gold'
+                            }`}
+                        >
+                            {filter === 'all' ? 'All' : filter === 'ring' ? 'Rings' : filter === 'jewellery' ? 'Jewellery' : filter === 'action' ? 'Needs action' : 'Completed'}
+                        </button>
+                    ))}
+                </div>
+                <input
+                    type="search"
+                    placeholder="Search client, product, order…"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    className="text-xs border border-border rounded px-3 py-1.5 w-56 focus:outline-none focus:border-gold bg-white"
+                />
             </div>
 
             {/* Jobs List */}
@@ -151,7 +175,7 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                                                 </span>
                                             ))}
                                         </div>
-                                        <div className="text-xs text-ink-soft whitespace-nowrap">⏱ {dueInfo(job.created_at)}</div>
+                                        <div className="text-md text-ink-soft whitespace-nowrap">⏱ {dueInfo(job.created_at)}</div>
                                     </div>
 
                                     {/* Job Note — shown below pipeline if exists */}

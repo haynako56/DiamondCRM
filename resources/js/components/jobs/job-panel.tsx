@@ -122,11 +122,12 @@ function PaymentNoteSection({ jobId, initialNote, onNoteSaved }) {
 
 function EditOrderModal({ job, savedDetails, onSave, onClose }) {
     const [draft, setDraft] = useState({
-        client:  savedDetails.client,
-        product: savedDetails.product,
-        email:   savedDetails.email,
-        phone:   savedDetails.phone,
-        address: savedDetails.address,
+        client:                savedDetails.client,
+        product:               savedDetails.product,
+        email:                 savedDetails.email,
+        phone:                 savedDetails.phone,
+        address:               savedDetails.address,
+        woocommerce_order_id:  savedDetails.woocommerce_order_id ?? '',
     });
 
     const handleConfirm = () => {
@@ -166,6 +167,17 @@ function EditOrderModal({ job, savedDetails, onSave, onClose }) {
                     <div>
                         <label className="text-xs text-ink-soft uppercase tracking-widest block mb-1">Address</label>
                         <input type="text" value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} className="w-full text-sm border border-border rounded px-3 py-2" />
+                    </div>
+                    <div>
+                        <label className="text-xs text-ink-soft uppercase tracking-widest block mb-1">WooCommerce Order ID</label>
+                        <input
+                            type="number"
+                            min="1"
+                            value={draft.woocommerce_order_id}
+                            onChange={(e) => setDraft({ ...draft, woocommerce_order_id: e.target.value })}
+                            placeholder="e.g. 12345"
+                            className="w-full text-sm border border-border rounded px-3 py-2"
+                        />
                     </div>
                 </div>
                 <div className="p-5 border-t border-border flex justify-end gap-2">
@@ -514,11 +526,12 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
     const [paymentNote, setPaymentNote] = useState(job.payment_note ?? '');
 
     const [savedDetails, setSavedDetails] = useState({
-        client:  job.client,
-        product: job.product,
-        email:   job.email,
-        phone:   job.phone,
-        address: job.address,
+        client:               job.client,
+        product:              job.product,
+        email:                job.email,
+        phone:                job.phone,
+        address:              job.address,
+        woocommerce_order_id: job.woocommerce_order_id ?? '',
     });
 
     const [isCompleted, setIsCompleted] = useState(job.completed ?? false);

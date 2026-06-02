@@ -68,8 +68,9 @@ class JobsController extends Controller
                 'status'        => $order->status,
                 'date_paid'     => $order->date_paid?->toDateString(),
                 'created_at'    => $order->woocommerce_created_at->toDateString(),
-                'due_date'      => $order->order_due_date?->toDateString() ?? '',
-                'production_category' => $order->production_category ?? 'cad_casting',
+                'due_date'             => $order->order_due_date?->toDateString() ?? '',
+                'production_category'  => $order->production_category ?? 'cad_casting',
+                'woocommerce_order_id' => $order->woocommerce_order_id,
             ];
         });
 
@@ -166,7 +167,8 @@ class JobsController extends Controller
             'payment_plan' => 'sometimes|nullable|string|max:255',
             'payment_note' => 'sometimes|nullable|string',
             'status'       => 'sometimes|string|in:processing,completed,on-hold,cancelled',
-            'due_date' => 'sometimes|nullable|date',
+            'due_date'             => 'sometimes|nullable|date',
+            'woocommerce_order_id' => 'sometimes|nullable|integer',
         ]);
  
         // Save notes only
@@ -225,9 +227,10 @@ class JobsController extends Controller
         $billing['phone']      = $request->phone ?? '';
  
         $order->update([
-            'billing'      => $billing,
-            'address'      => $request->address,
-            'product_name' => $request->product,
+            'billing'              => $billing,
+            'address'              => $request->address,
+            'product_name'         => $request->product,
+            'woocommerce_order_id' => $request->woocommerce_order_id ?? $order->woocommerce_order_id,
         ]);
  
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Order Details Updated.')]);
@@ -406,13 +409,14 @@ class JobsController extends Controller
     private function saveOrUpdateOrder(array $wooCommerceOrder): void
     {
         $existingOrder = Order::where('woocommerce_order_id', $wooCommerceOrder['id'])->first();
+        $payment       = $this->resolvePaymentFromMeta($wooCommerceOrder);
 
         if ($existingOrder) {
             // Order already exists — update data only, never touch tasks
             $existingOrder->update([
                 'currency'               => $wooCommerceOrder['currency'],
-                'total'                  => $wooCommerceOrder['total'],
-                'amount_paid'            => $wooCommerceOrder['date_paid'] ? $wooCommerceOrder['total'] : 0,
+                'total'                  => $payment['total'],
+                'amount_paid'            => $payment['amount_paid'],
                 'payment_method'         => $wooCommerceOrder['payment_method'],
                 'payment_method_title'   => $wooCommerceOrder['payment_method_title'],
                 'transaction_id'         => $wooCommerceOrder['transaction_id'] ?? null,
@@ -420,20 +424,21 @@ class JobsController extends Controller
                 'shipping'               => $wooCommerceOrder['shipping'],
                 'date_paid'              => $wooCommerceOrder['date_paid'],
                 'woocommerce_created_at' => $wooCommerceOrder['date_created'],
+                'meta_data'              => $wooCommerceOrder['meta_data'] ?? null,
             ]);
 
             $this->saveOrUpdateLineItems($existingOrder, $wooCommerceOrder['line_items']);
- 
+
             return;
         }
- 
+
         // New order — create it and set up default tasks
         $newOrder = Order::create([
             'woocommerce_order_id'   => $wooCommerceOrder['id'],
             'status'                 => $wooCommerceOrder['status'],
             'currency'               => $wooCommerceOrder['currency'],
-            'total'                  => $wooCommerceOrder['total'],
-            'amount_paid'            => $wooCommerceOrder['date_paid'] ? $wooCommerceOrder['total'] : 0,
+            'total'                  => $payment['total'],
+            'amount_paid'            => $payment['amount_paid'],
             'payment_method'         => $wooCommerceOrder['payment_method'],
             'payment_method_title'   => $wooCommerceOrder['payment_method_title'],
             'transaction_id'         => $wooCommerceOrder['transaction_id'] ?? null,
@@ -444,14 +449,35 @@ class JobsController extends Controller
             'dg_order_code'          => 'DG-' . str_pad(Order::max('id') + 1, 5, '0', STR_PAD_LEFT),
             'order_due_date'         => \Carbon\Carbon::parse($wooCommerceOrder['date_created'])->addWeeks(4),
             'production_category'    => 'cad_casting',
+            'meta_data'              => $wooCommerceOrder['meta_data'] ?? null,
         ]);
- 
+
         $this->saveOrUpdateLineItems($newOrder, $wooCommerceOrder['line_items']);
- 
+
         $newOrder->update(['product_name' => $newOrder->lineItems()->first()?->product_name]);
- 
+
         // Default to cad_casting — can be changed per order in the UI
         $newOrder->createDefaultTasks('cad_casting');
+    }
+
+    private function resolvePaymentFromMeta(array $wooCommerceOrder): array
+    {
+        $metaData      = $wooCommerceOrder['meta_data'] ?? [];
+        $getMeta       = fn(string $key) => collect($metaData)->firstWhere('key', $key)['value'] ?? null;
+        $balanceAmount = $getMeta('_balance_amount');
+        $hasBalance    = $balanceAmount !== null || $getMeta('_balance_order_id') !== null;
+
+        $total      = (float) $wooCommerceOrder['total'];
+        $amountPaid = $wooCommerceOrder['date_paid'] ? $total : 0.0;
+
+        if ($hasBalance && $balanceAmount !== null) {
+            $total += (float) $balanceAmount;
+            if ($getMeta('_balance_paid') === 'yes') {
+                $amountPaid += (float) $balanceAmount;
+            }
+        }
+
+        return ['total' => $total, 'amount_paid' => $amountPaid];
     }
  
     private function saveOrUpdateLineItems(Order $order, array $lineItems): void

@@ -30,6 +30,7 @@ class Order extends Model
         'category',
         'is_manual',
         'payment_note',
+        'meta_data',
     ];
 
     protected $casts = [
@@ -38,8 +39,9 @@ class Order extends Model
         'date_paid'              => 'datetime',
         'woocommerce_created_at' => 'datetime',
         'order_due_date'         => 'date',
-        'total'                  => 'float',
-        'amount_paid'            => 'float',
+        'total'       => 'float',
+        'amount_paid' => 'float',
+        'meta_data'   => 'array',
     ];
 
     protected $appends = ['amount_owing'];
