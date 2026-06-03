@@ -55,6 +55,14 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
         return                       { label: 'No deposit',   cls: 'bg-red-100 text-red-700' };
     };
 
+    const lastNameFirst = (fullName: string) => {
+        const parts = fullName.trim().split(' ');
+        if (parts.length < 2) return fullName;
+        const lastName  = parts.at(-1);
+        const firstName = parts.slice(0, -1).join(' ');
+        return `${lastName}, ${firstName}`;
+    };
+
     const taskSteps = (job) => {
         return (job.tasks ?? []).map((task: any) => ({
             id:    task.id,
@@ -145,7 +153,7 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                                     {/* Header Row */}
                                     <div className="flex items-start gap-3 mb-3">
                                         <div>
-                                            <div className="font-serif text-sm font-medium text-gold-dark">{job.woo_id}</div>
+                                            <div className="font-serif text-lg text-gold-dark">{job.woo_id}</div>
                                             <div className="text-xs text-ink-soft">{job.job_id}</div>
                                         </div>
                                         <div className="flex-1">
@@ -153,7 +161,7 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                                             {job.line_items?.length > 1 && (
                                                 <div className="text-xs text-ink-soft mt-0.5">+{job.line_items.length - 1} more item{job.line_items.length > 2 ? 's' : ''}</div>
                                             )}
-                                            <div className="text-xs text-ink-soft mt-1">{job.client} · {job.email}</div>
+                                            <div className="text-xs text-ink-soft mt-1">{lastNameFirst(job.client)} · {job.email}</div>
                                         </div>
                                         <div className="flex flex-col items-end gap-2">
                                             <div className="flex items-center gap-2">
