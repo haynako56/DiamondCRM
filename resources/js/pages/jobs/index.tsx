@@ -9,7 +9,7 @@ export default function JobsIndex({ jobs, stats }) {
     const [currentFilter, setCurrentFilter] = useState('all');
     const [expandedCards, setExpandedCards] = useState(new Set());
     const [isModalOpen, setIsModalOpen]     = useState(false);
-    const [noteUpdates, setNoteUpdates]     = useState<Record<number, string>>({});
+    const [noteUpdates, setNoteUpdates]     = useState<Record<number, any[]>>({});
     const [isSyncing, setIsSyncing]         = useState(false);
 
     const toggleCard = (jobId) => {
@@ -21,8 +21,8 @@ export default function JobsIndex({ jobs, stats }) {
         });
     };
 
-    const handleJobNotesUpdated = (jobId: number, note: string) => {
-        setNoteUpdates((prev) => ({ ...prev, [jobId]: note }));
+    const handleJobNotesUpdated = (jobId: number, notes: any[]) => {
+        setNoteUpdates((prev) => ({ ...prev, [jobId]: notes } as Record<number, any[]>));
     };
 
     const handleSync = () => {

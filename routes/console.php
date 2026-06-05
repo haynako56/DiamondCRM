@@ -13,3 +13,4 @@ Artisan::command('inspire', function () {
 // })->describe('Fetch all orders from WooCommerce and save them to the database.');
 
 Schedule::command('woocommerce:sync-orders')->hourly();
+Schedule::command('orders:archive-old')->monthly();

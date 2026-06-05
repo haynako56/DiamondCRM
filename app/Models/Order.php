@@ -26,9 +26,9 @@ class Order extends Model
         'production_category',
         'dg_order_code',
         'order_due_date',
-        'notes',
         'category',
         'is_manual',
+        'is_archived',
         'payment_note',
         'meta_data',
     ];
@@ -39,9 +39,10 @@ class Order extends Model
         'date_paid'              => 'datetime',
         'woocommerce_created_at' => 'datetime',
         'order_due_date'         => 'date',
-        'total'       => 'float',
-        'amount_paid' => 'float',
-        'meta_data'   => 'array',
+        'total'                  => 'float',
+        'amount_paid'            => 'float',
+        'meta_data'              => 'array',
+        'is_archived'            => 'boolean',
     ];
 
     protected $appends = ['amount_owing'];
@@ -58,6 +59,11 @@ class Order extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(OrderTask::class)->orderBy('sort_order');
+    }
+
+    public function orderNotes(): HasMany
+    {
+        return $this->hasMany(OrderNote::class)->latest();
     }
 
     // -------------------------------------------------------------------------

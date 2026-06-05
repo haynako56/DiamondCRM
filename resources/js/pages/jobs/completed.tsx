@@ -2,6 +2,7 @@ import { Head } from '@inertiajs/react';
 import { router } from '@inertiajs/react';
 
 interface CompletedJob {
+    db_id:   number;
     id:      string;
     woo_id:  string;
     client:  string;
@@ -44,6 +45,12 @@ export default function Completed({ jobs, stats, pagination }: Props) {
 
     const goToPage = (page: number) => {
         router.get('/jobs/completed', { page }, { preserveScroll: true });
+    };
+
+    const archiveJob = (job: CompletedJob) => {
+        if (!confirm(`Archive order ${job.id}? It will be removed from this list.`)) return;
+
+        router.patch(`/orders/${job.db_id}`, { is_archived: true }, { preserveScroll: true });
     };
 
     return (
@@ -92,12 +99,13 @@ export default function Completed({ jobs, stats, pagination }: Props) {
                                     <th className="text-left px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Due</th>
                                     <th className="text-right px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Balance</th>
                                     <th className="text-left px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Notes</th>
+                                    <th className="text-right px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {jobs.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="px-4 py-8 text-center text-ink-soft">No completed orders yet.</td>
+                                        <td colSpan={7} className="px-4 py-8 text-center text-ink-soft">No completed orders yet.</td>
                                     </tr>
                                 ) : (
                                     jobs.map((job) => (
@@ -113,6 +121,15 @@ export default function Completed({ jobs, stats, pagination }: Props) {
                                                 {job.balance > 0 ? `$${job.balance.toLocaleString()}` : '✓ Paid'}
                                             </td>
                                             <td className="px-4 py-3 text-ink-soft max-w-xs truncate">{job.notes}</td>
+                                            <td className="px-4 py-3 text-right">
+                                                <button
+                                                    onClick={() => archiveJob(job)}
+                                                    className="text-xs text-ink-soft border border-border px-2 py-1 rounded hover:border-amber-400 hover:text-amber-700 transition-colors"
+                                                    title="Archive this order"
+                                                >
+                                                    Archive
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))
                                 )}

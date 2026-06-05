@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\OrderNote;
 use App\Support\OrderTaskDefinitions;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,7 +17,7 @@ class JobsController extends Controller
 {
     public function index(): Response
     {
-        $orders = Order::with('lineItems', 'tasks')
+        $orders = Order::with('lineItems', 'tasks', 'orderNotes')
             ->where('status', '!=', 'checkout-draft')
             ->latest('woocommerce_created_at')
             ->get();
@@ -60,7 +61,11 @@ class JobsController extends Controller
                 'owing'         => $order->amount_owing,
                 'payment_type'  => 'deposit_balance',
                 'payment_note'  => $order->payment_note ?? '',
-                'notes'         => $order->notes ?? '',
+                'notes'         => $order->orderNotes->map(fn (OrderNote $note) => [
+                    'id'         => $note->id,
+                    'content'    => $note->content,
+                    'created_at' => $note->created_at->toIso8601String(),
+                ])->values()->toArray(),
                 'stone_data'    => $this->buildStoneData($firstLineItem),
                 'tasks'         => $order->tasks,
                 'custom_tasks'  => [],
@@ -161,25 +166,25 @@ class JobsController extends Controller
             'email'        => 'sometimes|nullable|email|max:255',
             'phone'        => ['sometimes', 'nullable', 'string', 'max:20', 'regex:/^[0-9\+\s\-\(\)]+$/'],
             'address'      => 'sometimes|nullable|string|max:500',
-            'notes'        => 'sometimes|nullable|string',
             'price'        => 'sometimes|nullable|numeric|min:0',
             'amount_paid'  => 'sometimes|nullable|numeric|min:0',
             'payment_plan' => 'sometimes|nullable|string|max:255',
             'payment_note' => 'sometimes|nullable|string',
-            'status'       => 'sometimes|string|in:processing,completed,on-hold,cancelled',
+            'status'               => 'sometimes|string|in:processing,completed,on-hold,cancelled',
             'due_date'             => 'sometimes|nullable|date',
             'woocommerce_order_id' => 'sometimes|nullable|integer',
+            'is_archived'          => 'sometimes|boolean',
         ]);
  
-        // Save notes only
-        if ($request->has('notes') && !$request->has('client') && !$request->has('price')) {
-            $order->update(['notes' => $request->notes]);
+        // Archive order
+        if ($request->has('is_archived') && !$request->has('client')) {
+            $order->update(['is_archived' => $request->is_archived]);
 
-            Inertia::flash('toast', ['type' => 'success', 'message' => __('Order Note Updated.')]);
+            Inertia::flash('toast', ['type' => 'success', 'message' => __('Order Archived.')]);
 
             return back();
         }
- 
+
         // Save payment only
         if ($request->has('price') && !$request->has('client')) {
             $order->update([
@@ -283,9 +288,9 @@ class JobsController extends Controller
         ];
  
         // Paginate the orders for the table
-        $paginated = Order::with('lineItems', 'tasks')
+        $paginated = Order::with('lineItems', 'tasks', 'orderNotes')
             ->where('status', '!=', 'checkout-draft')
-            ->where('status', '!=', 'completed') 
+            ->where('status', '!=', 'completed')
             ->latest('woocommerce_created_at')
             ->paginate($perPage);
  
@@ -304,11 +309,11 @@ class JobsController extends Controller
                 'stage'   => $currentStage,
                 'due'     => $order->order_due_date?->format('d M Y') ?? '—',
                 'balance' => $order->amount_owing,
-                'notes'   => $order->notes ?? '',
+                'notes'   => $order->orderNotes->first()?->content ?? '',
                 'status'  => $order->status,
             ];
         });
- 
+
         return Inertia::render('jobs/reports', [
             'jobs'  => $reportJobs,
             'stats' => $stats,
@@ -326,8 +331,9 @@ class JobsController extends Controller
 
     public function completed(): Response
     {
-        $orders = Order::with('lineItems', 'tasks')
+        $orders = Order::with('lineItems', 'tasks', 'orderNotes')
             ->where('status', 'completed')
+            ->where('is_archived', false)
             ->latest('woocommerce_created_at')
             ->paginate(20);
  
@@ -335,6 +341,7 @@ class JobsController extends Controller
             $firstLineItem = $order->lineItems->first();
  
             return [
+                'db_id'   => $order->id,
                 'id'      => $order->dg_order_code ?? 'DG-' . str_pad($order->id, 3, '0', STR_PAD_LEFT),
                 'woo_id'  => $order->is_manual ? 'Manual' : '#' . $order->woocommerce_order_id,
                 'client'  => $order->customerFullName(),
@@ -343,16 +350,15 @@ class JobsController extends Controller
                     : ($firstLineItem?->product_name ?? $order->product_name ?? ''),
                 'due'     => $order->order_due_date?->format('d M Y') ?? '—',
                 'balance' => $order->amount_owing,
-                'notes'   => $order->notes ?? '',
+                'notes'   => $order->orderNotes->first()?->content ?? '',
                 'status'  => $order->status,
-                'woo_id'  => $order->is_manual ? 'Manual' : '#' . $order->woocommerce_order_id,
             ];
         });
  
         $stats = [
-            'total_completed'  => Order::where('status', 'completed')->count(),
-            'total_value'      => Order::where('status', 'completed')->sum('total'),
-            'total_collected'  => Order::where('status', 'completed')->sum('amount_paid'),
+            'total_completed' => Order::where('status', 'completed')->where('is_archived', false)->count(),
+            'total_value'     => Order::where('status', 'completed')->where('is_archived', false)->sum('total'),
+            'total_collected' => Order::where('status', 'completed')->where('is_archived', false)->sum('amount_paid'),
         ];
  
         return Inertia::render('jobs/completed', [

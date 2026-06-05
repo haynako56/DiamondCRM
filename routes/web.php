@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
+use App\Http\Controllers\OrderNoteController;
 use App\Http\Controllers\OrderTaskController;
 use App\Http\Controllers\JobsController;
 use App\Http\Controllers\SettingsController;
@@ -19,6 +20,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/jobs', [App\Http\Controllers\JobsController::class, 'index'])->name('jobs.index');
     Route::get('/jobs/due-dates', [App\Http\Controllers\JobsController::class, 'due'])->name('jobs.due');
     Route::get('/jobs/reports', [App\Http\Controllers\JobsController::class, 'reports'])->name('jobs.reports');
+
+    Route::prefix('orders/{order}/notes')->group(function () {
+        Route::post('/',         [OrderNoteController::class, 'store'])->name('orders.notes.store');
+        Route::patch('/{note}',  [OrderNoteController::class, 'update'])->name('orders.notes.update');
+        Route::delete('/{note}', [OrderNoteController::class, 'destroy'])->name('orders.notes.destroy');
+    });
 
     Route::prefix('orders/{order}/tasks')->group(function () {
         Route::post('/',         [OrderTaskController::class, 'store'])->name('orders.tasks.store');

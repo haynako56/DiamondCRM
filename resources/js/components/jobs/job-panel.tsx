@@ -411,48 +411,158 @@ function AddCustomTaskForm({ orderId, onAdded, onCancel }) {
 
 // ─── Job Notes Section ────────────────────────────────────────────────────────
 
-function JobNotesSection({ jobId, initialNote, onNoteSaved }) {
-    const [note, setNote]           = useState(initialNote ?? '');
-    const [draftNote, setDraftNote] = useState(initialNote ?? '');
+type OrderNote = { id: number; content: string; created_at: string };
+
+function NoteItem({ jobId, note, onUpdated, onDeleted }: { jobId: number; note: OrderNote; onUpdated: (updated: OrderNote) => void; onDeleted: (id: number) => void }) {
     const [isEditing, setIsEditing] = useState(false);
+    const [draft, setDraft]         = useState(note.content);
+    const [isSaving, setIsSaving]   = useState(false);
 
     const handleSave = () => {
-        setNote(draftNote);
-        setIsEditing(false);
-        onNoteSaved(draftNote);
-        router.patch(`/orders/${jobId}`, { notes: draftNote }, { preserveScroll: true, preserveState: true });
+        if (!draft.trim()) return;
+        setIsSaving(true);
+        router.patch(`/orders/${jobId}/notes/${note.id}`, { content: draft.trim() }, {
+            preserveScroll: true,
+            preserveState:  true,
+            onSuccess: () => {
+                onUpdated({ ...note, content: draft.trim() });
+                setIsEditing(false);
+                setIsSaving(false);
+            },
+            onError: () => setIsSaving(false),
+        });
     };
 
     const handleCancel = () => {
-        setDraftNote(note);
+        setDraft(note.content);
         setIsEditing(false);
+    };
+
+    if (isEditing) {
+        return (
+            <div className="space-y-2">
+                <textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    rows={3}
+                    className="w-full text-xs border border-gold rounded px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-gold"
+                    autoFocus
+                />
+                <div className="flex gap-2">
+                    <button onClick={handleSave} disabled={!draft.trim() || isSaving} className="text-xs px-3 py-1.5 bg-gold text-white rounded font-medium hover:!bg-gold-dark transition-colors disabled:opacity-50">
+                        {isSaving ? 'Saving…' : 'Save'}
+                    </button>
+                    <button onClick={handleCancel} className="text-xs px-3 py-1.5 border border-border rounded hover:!border-gold transition-colors">Cancel</button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="group text-xs bg-gold-pale border border-gold-light rounded px-3 py-2 text-ink-mid leading-relaxed flex gap-2 items-start">
+            <div className="flex-1 cursor-pointer" onClick={() => setIsEditing(true)}>
+                <p>{note.content}</p>
+                <p className="text-ink-soft mt-1">{new Date(note.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+            </div>
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 flex-shrink-0">
+                <button onClick={() => setIsEditing(true)} className="text-ink-soft hover:text-gold transition-colors" title="Edit note">✎</button>
+                <button onClick={() => onDeleted(note.id)} className="text-ink-soft hover:text-red-500 transition-colors" title="Delete note">✕</button>
+            </div>
+        </div>
+    );
+}
+
+function JobNotesSection({ jobId, initialNotes, onNotesUpdated }: { jobId: number; initialNotes: OrderNote[]; onNotesUpdated: (notes: OrderNote[]) => void }) {
+    const [notes, setNotes]               = useState<OrderNote[]>(initialNotes ?? []);
+    const [newNoteContent, setNewNoteContent] = useState('');
+    const [isAdding, setIsAdding]         = useState(false);
+    const [isSaving, setIsSaving]         = useState(false);
+
+    const handleAdd = () => {
+        if (!newNoteContent.trim()) return;
+        setIsSaving(true);
+        router.post(`/orders/${jobId}/notes`, { content: newNoteContent.trim() }, {
+            preserveScroll: true,
+            preserveState:  true,
+            onSuccess: (page) => {
+                const updatedJobs  = (page.props as any).jobs;
+                const updatedJob   = updatedJobs?.find((job: any) => job.id === jobId);
+                const updatedNotes = updatedJob?.notes ?? notes;
+                setNotes(updatedNotes);
+                onNotesUpdated(updatedNotes);
+                setNewNoteContent('');
+                setIsAdding(false);
+                setIsSaving(false);
+            },
+            onError: () => setIsSaving(false),
+        });
+    };
+
+    const handleDelete = (noteId: number) => {
+        router.delete(`/orders/${jobId}/notes/${noteId}`, {
+            preserveScroll: true,
+            preserveState:  true,
+            onSuccess: (page) => {
+                const updatedJobs  = (page.props as any).jobs;
+                const updatedJob   = updatedJobs?.find((job: any) => job.id === jobId);
+                const updatedNotes = updatedJob?.notes ?? notes.filter((note) => note.id !== noteId);
+                setNotes(updatedNotes);
+                onNotesUpdated(updatedNotes);
+            },
+        });
     };
 
     return (
         <section>
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-border">
                 <h3 className="text-xs font-semibold text-ink-soft uppercase tracking-wider">Job Notes</h3>
-                {!isEditing && (
-                    <button onClick={() => { setDraftNote(note); setIsEditing(true); }} className="text-xs px-2 py-1 border border-border rounded hover:!border-gold transition-colors flex items-center gap-1">
-                        ✎ Edit
+                {!isAdding && (
+                    <button onClick={() => setIsAdding(true)} className="text-xs px-2 py-1 border border-border rounded hover:!border-gold transition-colors">
+                        + Add note
                     </button>
                 )}
             </div>
-            {isEditing ? (
+
+            {notes.length > 0 && (
+                <div className="space-y-2 mb-3">
+                    {notes.map((note) => (
+                        <NoteItem
+                            key={note.id}
+                            jobId={jobId}
+                            note={note}
+                            onUpdated={(updated) => {
+                                const updatedNotes = notes.map((existingNote) => existingNote.id === updated.id ? updated : existingNote);
+                                setNotes(updatedNotes);
+                                onNotesUpdated(updatedNotes);
+                            }}
+                            onDeleted={handleDelete}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {notes.length === 0 && !isAdding && (
+                <p className="text-xs text-ink-soft mb-2">No notes yet.</p>
+            )}
+
+            {isAdding ? (
                 <div className="space-y-2">
-                    <textarea value={draftNote} onChange={(e) => setDraftNote(e.target.value)} rows={4} placeholder="Add job notes..." className="w-full text-xs border border-gold rounded px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-gold" autoFocus />
+                    <textarea
+                        value={newNoteContent}
+                        onChange={(e) => setNewNoteContent(e.target.value)}
+                        rows={3}
+                        placeholder="Add a note..."
+                        className="w-full text-xs border border-gold rounded px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-gold"
+                        autoFocus
+                    />
                     <div className="flex gap-2">
-                        <button onClick={handleSave} className="text-xs px-3 py-1.5 bg-gold text-white rounded font-medium hover:!bg-gold-dark transition-colors">Save</button>
-                        <button onClick={handleCancel} className="text-xs px-3 py-1.5 border border-border rounded hover:!border-gold transition-colors">Cancel</button>
+                        <button onClick={handleAdd} disabled={!newNoteContent.trim() || isSaving} className="text-xs px-3 py-1.5 bg-gold text-white rounded font-medium hover:!bg-gold-dark transition-colors disabled:opacity-50">
+                            {isSaving ? 'Saving…' : 'Save'}
+                        </button>
+                        <button onClick={() => { setIsAdding(false); setNewNoteContent(''); }} className="text-xs px-3 py-1.5 border border-border rounded hover:!border-gold transition-colors">Cancel</button>
                     </div>
                 </div>
-            ) : note ? (
-                <div onClick={() => { setDraftNote(note); setIsEditing(true); }} className="text-xs text-ink-mid bg-gold-pale border border-gold-light rounded px-3 py-2 cursor-pointer hover:border-gold transition-colors leading-relaxed">
-                    {note}
-                </div>
-            ) : (
-                <button onClick={() => setIsEditing(true)} className="text-xs text-gold-dark font-medium hover:underline">+ Add note</button>
-            )}
+            ) : null}
         </section>
     );
 }
@@ -518,7 +628,7 @@ function EditProductionModal({ job, currentCategory, onSave, onClose }) {
 export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
     const [tasks, setTasks]                         = useState(job.tasks ?? []);
     const [showAddTaskForm, setShowAddTaskForm]      = useState(false);
-    const [jobNotes, setJobNotes]                   = useState(job.notes ?? '');
+    const [jobNotes, setJobNotes]                   = useState<OrderNote[]>(Array.isArray(job.notes) ? job.notes : []);
     const [isEditModalOpen, setIsEditModalOpen]           = useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen]     = useState(false);
     const [isProductionModalOpen, setIsProductionModalOpen] = useState(false);
@@ -554,9 +664,9 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
         setTasks((prev) => prev.filter((task) => task.id !== deletedTaskId));
     };
 
-    const handleNotesSaved = (updatedNote: string) => {
-        setJobNotes(updatedNote);
-        if (onJobNotesUpdated) onJobNotesUpdated(job.id, updatedNote);
+    const handleNotesUpdated = (updatedNotes: OrderNote[]) => {
+        setJobNotes(updatedNotes);
+        if (onJobNotesUpdated) onJobNotesUpdated(job.id, updatedNotes);
     };
 
     const sendJobReport = () => {
@@ -608,8 +718,9 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
         report += `\n`;
 
         // Job notes
-        if (jobNotes) {
-            report += `NOTES\n${jobNotes}\n`;
+        if (jobNotes.length > 0) {
+            report += `NOTES\n`;
+            jobNotes.forEach((note) => { report += `${note.content}\n`; });
         }
 
         const subject = encodeURIComponent(`Diamond Gallery — Job Report ${job.job_id} · ${savedDetails.client} · ${date}`);
@@ -836,7 +947,7 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
                     </section>
 
                     {/* Job Notes */}
-                    <JobNotesSection jobId={job.id} initialNote={jobNotes} onNoteSaved={handleNotesSaved} />
+                    <JobNotesSection jobId={job.id} initialNotes={jobNotes} onNotesUpdated={handleNotesUpdated} />
 
                     {/* Actions */}
                     <section>

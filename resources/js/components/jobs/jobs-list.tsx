@@ -2,15 +2,6 @@ import { useState } from 'react';
 
 export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter, expandedCards, toggleCard, onSelectJob }) {
 
-    // Track notes locally so they update instantly when edited from the panel
-    const [jobNotes, setJobNotes] = useState<Record<number, string>>(
-        Object.fromEntries(jobs.map((job) => [job.id, job.notes ?? '']))
-    );
-
-    const updateJobNote = (jobId: number, note: string) => {
-        setJobNotes((prev) => ({ ...prev, [jobId]: note }));
-    };
-
     const [paymentNotes, setPaymentNotes] = useState<Record<number, string>>(
         Object.fromEntries(jobs.map((job) => [job.id, job.payment_note ?? '']))
     );
@@ -143,7 +134,7 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                         const steps        = taskSteps(job);
                         const doneTasks    = steps.filter((s) => s.done);
                         const badge        = paymentBadge(job);
-                        const currentNote  = jobNotes[job.id] ?? '';
+                        const latestNotes    = (Array.isArray(job.notes) ? job.notes : []).slice(0, 2);
                         const currentPaymentNote = paymentNotes[job.id] ?? '';
 
                         return (
@@ -186,10 +177,14 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                                         <div className="text-md text-ink-soft whitespace-nowrap">⏱ {dueInfo(job.created_at)}</div>
                                     </div>
 
-                                    {/* Job Note — shown below pipeline if exists */}
-                                    {currentNote && (
-                                        <div className="mt-3 text-xs p-2 bg-gold-pale border border-gold-light rounded text-ink-mid line-clamp-2">
-                                            {currentNote}
+                                    {/* Latest 2 notes */}
+                                    {latestNotes.length > 0 && (
+                                        <div className="mt-3 space-y-1">
+                                            {latestNotes.map((note: any, index: number) => (
+                                                <div key={index} className="text-xs p-2 bg-gold-pale border border-gold-light rounded text-ink-mid line-clamp-2">
+                                                    {note.content}
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                     {/* Payment Note — shown below pipeline if exists */}
@@ -231,7 +226,7 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                                         )}
 
                                         <button
-                                            onClick={() => onSelectJob({ ...job, _updateNote: updateJobNote })}
+                                            onClick={() => onSelectJob(job)}
                                             className="text-xs text-gold-dark font-medium border border-gold-light px-3 py-1 rounded hover:bg-gold-pale transition-colors"
                                         >
                                             Open full details →
