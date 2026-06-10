@@ -148,11 +148,11 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                                             <div className="text-xs text-ink-soft">{job.job_id}</div>
                                         </div>
                                         <div className="flex-1">
-                                            <div className="text-sm font-medium">{job.product}</div>
+                                            <div className="text-sm font-medium">{job.client} · {job.email}</div>
                                             {job.line_items?.length > 1 && (
                                                 <div className="text-xs text-ink-soft mt-0.5">+{job.line_items.length - 1} more item{job.line_items.length > 2 ? 's' : ''}</div>
                                             )}
-                                            <div className="text-xs text-ink-soft mt-1">{lastNameFirst(job.client)} · {job.email}</div>
+                                            <div className="text-xs text-ink-soft mt-1">{job.product}</div>
                                         </div>
                                         <div className="flex flex-col items-end gap-2">
                                             <div className="flex items-center gap-2">
