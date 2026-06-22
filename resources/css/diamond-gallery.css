@@ -449,7 +449,7 @@ textarea:focus {
 }
 
 /* ── Due date label pills ────────────────────────── */
-.due-label  { font-size: 10px; font-weight: 600; flex-shrink: 0; border-radius: 4px; padding: 1px 5px; }
+.due-label  { margin-left: auto; font-size: 10px; font-weight: 600; flex-shrink: 0; border-radius: 4px; padding: 1px 5px; }
 .due-red    { background: #C0392B; color: #fff; }
 .due-orange { background: #E67E22; color: #fff; }
 .due-green  { background: var(--green); color: #fff; }
