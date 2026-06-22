@@ -9,6 +9,8 @@ const CATEGORIES = [
     { label: "Women's Wedding Band — Handmade",          value: "Women's Wedding Band — Handmade" },
     { label: "Men's Wedding Band — Order from Supplier", value: "Men's Wedding Band — Order from Supplier" },
     { label: 'Jewellery — Order from Supplier',          value: 'Jewellery — Order from Supplier' },
+    { label: 'Ring Resize',                              value: 'Ring Resize' },
+    { label: 'Jewellery Repair',                         value: 'Jewellery Repair' },
 ];
 
 export default function NewJobModal({ onClose }) {

@@ -1,5 +1,4 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid, Package, Calendar, BarChart3, Settings, User } from 'lucide-react';
 import {
     Sidebar,
     SidebarContent,
@@ -11,13 +10,14 @@ import {
 } from '@/components/ui/sidebar';
 
 const navItems = [
-    { label: 'Orders',    href: '/jobs',          icon: '◈', badge: true  },
-    { label: 'Due Dates', href: '/jobs/due-dates',       icon: '◷', badge: false },
-    { label: 'Reports',   href: '/jobs/reports',   icon: '◎', badge: false },
-    { label: 'Completed', href: '/jobs/completed', icon: '✓', badge: false },
-    { label: 'Settings',  href: '/jobs/settings',  icon: '◉', badge: false },
-    { label: 'Profile',  href: '/settings/profile',  icon: '◉', badge: false },
-    { label: 'Users', href: '/settings/users', icon: '◉', badge: false },
+    { label: 'Orders',    href: '/jobs',            icon: '◈', badge: true  },
+    { label: 'Due Dates', href: '/jobs/due-dates',  icon: '◷', badge: false },
+    { label: 'Status',    href: '/jobs/status',     icon: '◑', badge: false },
+    { label: 'Reports',   href: '/jobs/reports',    icon: '◎', badge: false },
+    { label: 'Completed', href: '/jobs/completed',  icon: '✓', badge: false },
+    { label: 'Settings',  href: '/jobs/settings',   icon: '◉', badge: false },
+    { label: 'Profile',   href: '/settings/profile',icon: '◉', badge: false },
+    { label: 'Users',     href: '/settings/users',  icon: '◉', badge: false },
 ];
 
 export function AppSidebar({ stats }: { stats?: { active?: number } }) {
@@ -69,7 +69,7 @@ export function AppSidebar({ stats }: { stats?: { active?: number } }) {
                                     className="relative"
                                     style={{
                                         backgroundColor: active ? 'var(--menu-bg)' : 'transparent',
-                                        color:           active ? 'var(--gold-light)' : 'var(--menu)',
+                                        color:           active ? 'var(--nav-active)' : 'var(--menu)',
                                         borderRadius:    '8px',
                                         padding:         '10px 12px',
                                         fontSize:        '13px',

@@ -19,6 +19,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Jobs management
     Route::get('/jobs', [App\Http\Controllers\JobsController::class, 'index'])->name('jobs.index');
     Route::get('/jobs/due-dates', [App\Http\Controllers\JobsController::class, 'due'])->name('jobs.due');
+    Route::get('/jobs/status', [App\Http\Controllers\JobsController::class, 'status'])->name('jobs.status');
     Route::get('/jobs/reports', [App\Http\Controllers\JobsController::class, 'reports'])->name('jobs.reports');
 
     Route::prefix('orders/{order}/notes')->group(function () {
@@ -44,6 +45,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('/jobs/sync', [JobsController::class, 'sync'])->name('jobs.sync');
     Route::get('/jobs/completed', [JobsController::class, 'completed'])->name('jobs.completed');
+    Route::patch('/orders/{order}/reopen',   [JobsController::class, 'reopen'])->name('jobs.reopen');
+    Route::patch('/orders/{order}/complete', [JobsController::class, 'complete'])->name('jobs.complete');
 
     Route::get('/settings/users',       [UsersController::class, 'index'])->name('settings.users');
     Route::post('/settings/users',      [UsersController::class, 'store'])->name('settings.users.store');

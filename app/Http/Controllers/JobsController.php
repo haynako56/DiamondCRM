@@ -22,62 +22,7 @@ class JobsController extends Controller
             ->latest('woocommerce_created_at')
             ->get();
 
-        $jobs = $orders->map(function (Order $order) {
-            $firstLineItem = $order->lineItems->first();
-
-            // Manual orders use product_name and category from the order itself
-            $productName = $order->is_manual
-                ? ($order->product_name ?? '')
-                : ($order->product_name ?? $firstLineItem?->product_name ?? 'Unknown Product');
-
-            $type = $order->is_manual
-                ? (str_contains(strtolower($order->category ?? ''), 'jewellery') ? 'jewellery' : 'ring')
-                : ($firstLineItem?->category ?? 'jewellery');
-
-            return [
-                'id'            => $order->id,
-                'job_id'        => $order->dg_order_code ?? 'DG-' . str_pad($order->id, 3, '0', STR_PAD_LEFT),
-                'woo_id' => $order->is_manual ? 'Manual' : '#' . $order->woocommerce_order_id,
-                'is_manual'     => $order->is_manual,
-                'type'          => $type,
-                'category'      => $order->category ?? '',
-                'subtype'       => $type === 'ring' ? 'ring_cad' : 'jewellery',
-                'client'        => $order->customerFullName(),
-                'email'         => $order->customerEmail(),
-                'phone'         => $order->customerPhone(),
-                'address'       => $order->address ?? $order->billingAddress(),
-                'product'       => $productName,
-                'line_items'    => $order->lineItems->map(fn ($lineItem) => [
-                    'id'           => $lineItem->id,
-                    'product_name' => $lineItem->product_name,
-                    'category'     => $lineItem->category,
-                    'quantity'     => $lineItem->quantity,
-                    'total'        => $lineItem->total,
-                    'image_url'    => $lineItem->image_url,
-                    'meta_data'    => $lineItem->meta_data,
-                ]),
-                'price'         => $order->total,
-                'paid'          => $order->amount_paid,
-                'owing'         => $order->amount_owing,
-                'payment_type'  => 'deposit_balance',
-                'payment_note'  => $order->payment_note ?? '',
-                'notes'         => $order->orderNotes->map(fn (OrderNote $note) => [
-                    'id'         => $note->id,
-                    'content'    => $note->content,
-                    'created_at' => $note->created_at->toIso8601String(),
-                ])->values()->toArray(),
-                'stone_data'    => $this->buildStoneData($firstLineItem),
-                'tasks'         => $order->tasks,
-                'custom_tasks'  => [],
-                'completed'     => $order->status === 'completed',
-                'status'        => $order->status,
-                'date_paid'     => $order->date_paid?->toDateString(),
-                'created_at'    => $order->woocommerce_created_at->toDateString(),
-                'due_date'             => $order->order_due_date?->toDateString() ?? '',
-                'production_category'  => $order->production_category ?? 'cad_casting',
-                'woocommerce_order_id' => $order->woocommerce_order_id,
-            ];
-        });
+        $jobs = $orders->map(fn (Order $order) => $this->buildJobShape($order));
 
         $stats = [
             'active'      => $orders->where('status', '!=', 'completed')->count(),
@@ -243,6 +188,97 @@ class JobsController extends Controller
         return back();
     }
 
+    public function status(): Response
+    {
+        $orders = Order::with('lineItems', 'tasks', 'orderNotes')
+            ->where('status', '!=', 'checkout-draft')
+            ->where('status', '!=', 'completed')
+            ->get();
+
+        $sentToCad         = [];
+        $danieleProduction = [];
+        $allOpen           = [];
+
+        foreach ($orders as $order) {
+            $firstLineItem  = $order->lineItems->first();
+            $sortedTasks    = $order->tasks->sortBy('sort_order');
+            $pendingTask    = $sortedTasks->where('is_done', false)->first();
+            $productionTask = $sortedTasks->where('key', 'production')->first();
+            $cadSendTask    = $sortedTasks->where('key', 'cad_send')->first();
+            $cadApproveTask = $sortedTasks->where('key', 'cad_approve')->first();
+            $castingTask    = $sortedTasks->where('key', 'casting')->first();
+            $dispatchTask   = $sortedTasks->where('key', 'dispatch')->first();
+            $returnTask     = $sortedTasks->where('key', 'return_to_client')->first();
+            $category       = $order->production_category ?? 'cad_casting';
+
+            $job = [
+                'db_id'               => $order->id,
+                'id'                  => $order->dg_order_code ?? 'DG-' . str_pad($order->id, 3, '0', STR_PAD_LEFT),
+                'woo_id'              => $order->is_manual ? 'Manual' : '#' . $order->woocommerce_order_id,
+                'client'              => $order->customerFullName(),
+                'product'             => $order->is_manual
+                    ? ($order->product_name ?? '')
+                    : ($firstLineItem?->product_name ?? $order->product_name ?? ''),
+                'stage'               => $pendingTask?->label ?? 'Complete',
+                'due_raw'             => $order->order_due_date?->format('Y-m-d'),
+                'category'            => $category,
+                'cad_sent'            => (bool) ($cadSendTask?->is_done ?? false),
+                'cad_approved'        => (bool) ($cadApproveTask?->is_done ?? false),
+                'cad_send_date'       => $cadSendTask?->task_date?->format('d M Y') ?? '',
+                'casting_done'        => (bool) ($castingTask?->is_done ?? false),
+                'production_progress' => $productionTask?->progress ?? 'Not started',
+                'production_done'     => (bool) ($productionTask?->is_done ?? false),
+                'production_date'     => $productionTask?->task_date?->format('d M Y') ?? '',
+                'cad_note'            => $cadSendTask?->note ?? $cadApproveTask?->note ?? '',
+                'production_note'     => $productionTask?->note ?? '',
+            ];
+
+            // CAD board: only cad_casting orders where client approval is not yet done
+            if ($category === 'cad_casting' && !($cadApproveTask?->is_done)) {
+                $sentToCad[] = $job;
+            }
+
+            // Daniele Production board
+            if (!in_array($category, ['supplier_product', 'custom'])) {
+                if (in_array($category, ['ring_resize', 'jewellery_repair'])) {
+                    // Show until return_to_client is done
+                    if (!($returnTask?->is_done)) {
+                        $danieleProduction[] = $job;
+                    }
+                } elseif ($category === 'handmade') {
+                    // Always show until dispatched
+                    if (!($dispatchTask?->is_done)) {
+                        $danieleProduction[] = $job;
+                    }
+                } elseif ($category === 'cad_casting' && $productionTask) {
+                    // Show when casting done OR production started/done, AND not yet dispatched
+                    $productionStarted = $productionTask->is_done
+                        || ($productionTask->progress && $productionTask->progress !== 'Not started')
+                        || ($castingTask?->is_done);
+                    if ($productionStarted && !($dispatchTask?->is_done)) {
+                        $danieleProduction[] = $job;
+                    }
+                }
+            }
+
+            $allOpen[] = $job;
+        }
+
+        $sortByDue = fn ($jobA, $jobB) => strcmp($jobA['due_raw'] ?? '9999', $jobB['due_raw'] ?? '9999');
+        usort($sentToCad,         $sortByDue);
+        usort($danieleProduction, $sortByDue);
+        usort($allOpen,           $sortByDue);
+
+        $jobs = $orders->map(fn (Order $order) => $this->buildJobShape($order))->values();
+
+        return Inertia::render('jobs/status', [
+            'sent_to_cad'        => $sentToCad,
+            'daniele_production' => $danieleProduction,
+            'all_open'           => $allOpen,
+            'jobs'               => $jobs,
+        ]);
+    }
+
     public function due(): Response
     {
         $orders = Order::with('lineItems', 'tasks')
@@ -273,59 +309,114 @@ class JobsController extends Controller
         ]);
     }
 
-    public function reports(Request $request): Response
+    public function reports(): Response
     {
-        $perPage = 20;
- 
-        // Stats are calculated across ALL orders — not just the current page
-        $allOrders = Order::where('status', '!=', 'completed')->get();
- 
-        $stats = [
-            'total_order_value' => $allOrders->sum('total'),
-            'collected'         => $allOrders->sum('amount_paid'),
-            'outstanding'       => $allOrders->sum(fn (Order $order) => $order->amount_owing),
-            'active_jobs'       => $allOrders->where('status', '!=', 'completed')->count(),
-        ];
- 
-        // Paginate the orders for the table
-        $paginated = Order::with('lineItems', 'tasks', 'orderNotes')
+        $orders = Order::with('lineItems', 'tasks', 'orderNotes')
             ->where('status', '!=', 'checkout-draft')
             ->where('status', '!=', 'completed')
-            ->latest('woocommerce_created_at')
-            ->paginate($perPage);
- 
-        $reportJobs = $paginated->getCollection()->map(function (Order $order) {
+            ->orderBy('order_due_date', 'asc')
+            ->get();
+
+        $today = now()->startOfDay();
+
+        $stats = [
+            'total_order_value' => $orders->sum('total'),
+            'collected'         => $orders->sum('amount_paid'),
+            'outstanding'       => $orders->sum(fn (Order $order) => $order->amount_owing),
+            'active_jobs'       => $orders->count(),
+        ];
+
+        $weekGroups = [
+            'overdue'    => ['label' => 'Overdue',    'color' => 'red',   'jobs' => []],
+            'this_week'  => ['label' => 'This week',  'color' => 'amber', 'jobs' => []],
+            'next_week'  => ['label' => 'Next week',  'color' => 'gray',  'jobs' => []],
+            'in_2_weeks' => ['label' => 'In 2 weeks', 'color' => 'gray',  'jobs' => []],
+            'in_3_weeks' => ['label' => 'In 3 weeks', 'color' => 'gray',  'jobs' => []],
+            'later'      => ['label' => 'In 4+ weeks','color' => 'gray',  'jobs' => []],
+            'no_date'    => ['label' => 'No due date','color' => 'gray',  'jobs' => []],
+        ];
+
+        $stageColorMap = [
+            'diamonds_order'     => ['color' => '#92600A', 'bg' => '#FEF3E2'],
+            'diamonds_delivered' => ['color' => '#92600A', 'bg' => '#FEF3E2'],
+            'cad_send'           => ['color' => '#1A4A7A', 'bg' => '#E8F0FA'],
+            'cad_approve'        => ['color' => '#1A4A7A', 'bg' => '#E8F0FA'],
+            'casting'            => ['color' => '#4A3A9A', 'bg' => '#F0EDFB'],
+            'production'         => ['color' => '#2D6A4F', 'bg' => '#E8F4EE'],
+            'dispatch'           => ['color' => '#2D6A4F', 'bg' => '#E8F4EE'],
+            'supplier_order'     => ['color' => '#92600A', 'bg' => '#FEF3E2'],
+            'delivery_confirmed' => ['color' => '#92600A', 'bg' => '#FEF3E2'],
+            'return_to_client'   => ['color' => '#2D6A4F', 'bg' => '#E8F4EE'],
+        ];
+
+        $stageCounts = [];
+
+        foreach ($orders as $order) {
             $firstLineItem = $order->lineItems->first();
-            $pendingTasks  = $order->tasks->where('is_done', false);
-            $currentStage  = $pendingTasks->first()?->label ?? 'Complete';
- 
-            return [
-                'id'      => $order->dg_order_code ?? 'DG-' . str_pad($order->id, 3, '0', STR_PAD_LEFT),
-                'woo_id'  => $order->is_manual ? 'Manual' : '#' . $order->woocommerce_order_id,
-                'client'  => $order->customerFullName(),
-                'product' => $order->is_manual
+            $pendingTask   = $order->tasks->where('is_done', false)->sortBy('sort_order')->first();
+            $taskKey       = $pendingTask?->key ?? '';
+            $currentStage  = $pendingTask?->label ?? 'Complete';
+            $stageStyle    = $stageColorMap[$taskKey] ?? ['color' => '#7A8C90', 'bg' => '#ECE9E3'];
+
+            if (!isset($stageCounts[$currentStage])) {
+                $stageCounts[$currentStage] = [
+                    'label' => $currentStage,
+                    'count' => 0,
+                    'color' => $stageStyle['color'],
+                    'bg'    => $stageStyle['bg'],
+                ];
+            }
+            $stageCounts[$currentStage]['count']++;
+
+            $job = [
+                'db_id'       => $order->id,
+                'id'          => $order->dg_order_code ?? 'DG-' . str_pad($order->id, 3, '0', STR_PAD_LEFT),
+                'woo_id'      => $order->is_manual ? 'Manual' : '#' . $order->woocommerce_order_id,
+                'client'      => $order->customerFullName(),
+                'product'     => $order->is_manual
                     ? ($order->product_name ?? '')
                     : ($firstLineItem?->product_name ?? $order->product_name ?? ''),
-                'stage'   => $currentStage,
-                'due'     => $order->order_due_date?->format('d M Y') ?? '—',
-                'balance' => $order->amount_owing,
-                'notes'   => $order->orderNotes->first()?->content ?? '',
-                'status'  => $order->status,
+                'stage'       => $currentStage,
+                'stage_color' => $stageStyle['color'],
+                'stage_bg'    => $stageStyle['bg'],
+                'due'         => $order->order_due_date?->format('d M Y') ?? '',
+                'due_raw'     => $order->order_due_date?->format('Y-m-d'),
+                'balance'     => $order->amount_owing,
+                'notes'       => $order->orderNotes->first()?->content ?? '',
             ];
-        });
+
+            if (!$order->order_due_date) {
+                $weekGroups['no_date']['jobs'][]    = $job;
+            } elseif ($order->order_due_date->lt($today)) {
+                $weekGroups['overdue']['jobs'][]    = $job;
+            } elseif ($order->order_due_date->lt($today->copy()->addDays(7))) {
+                $weekGroups['this_week']['jobs'][]  = $job;
+            } elseif ($order->order_due_date->lt($today->copy()->addDays(14))) {
+                $weekGroups['next_week']['jobs'][]  = $job;
+            } elseif ($order->order_due_date->lt($today->copy()->addDays(21))) {
+                $weekGroups['in_2_weeks']['jobs'][] = $job;
+            } elseif ($order->order_due_date->lt($today->copy()->addDays(28))) {
+                $weekGroups['in_3_weeks']['jobs'][] = $job;
+            } else {
+                $weekGroups['later']['jobs'][]      = $job;
+            }
+        }
+
+        // Only send groups that have jobs
+        $groups = array_values(array_filter($weekGroups, fn ($group) => count($group['jobs']) > 0));
+
+        // Sort stage counts by count descending
+        $stageSummary = array_values($stageCounts);
+        usort($stageSummary, fn ($stageA, $stageB) => $stageB['count'] - $stageA['count']);
+
+        $jobs = $orders->map(fn (Order $order) => $this->buildJobShape($order))->values();
 
         return Inertia::render('jobs/reports', [
-            'jobs'  => $reportJobs,
-            'stats' => $stats,
+            'groups'        => $groups,
+            'stage_counts'  => $stageSummary,
+            'stats'         => $stats,
             'daniele_email' => WooCommerceSetting::first()?->production_email ?? '',
-            'pagination' => [
-                'current_page' => $paginated->currentPage(),
-                'last_page'    => $paginated->lastPage(),
-                'per_page'     => $paginated->perPage(),
-                'total'        => $paginated->total(),
-                'from'         => $paginated->firstItem(),
-                'to'           => $paginated->lastItem(),
-            ],
+            'jobs'          => $jobs,
         ]);
     }
 
@@ -336,33 +427,42 @@ class JobsController extends Controller
             ->where('is_archived', false)
             ->latest('woocommerce_created_at')
             ->paginate(20);
- 
+
         $reportJobs = $orders->getCollection()->map(function (Order $order) {
             $firstLineItem = $order->lineItems->first();
- 
+            $dispatchTask  = $order->tasks->firstWhere('key', 'dispatch')
+                ?? $order->tasks->firstWhere('key', 'return_to_client');
+
             return [
-                'db_id'   => $order->id,
-                'id'      => $order->dg_order_code ?? 'DG-' . str_pad($order->id, 3, '0', STR_PAD_LEFT),
-                'woo_id'  => $order->is_manual ? 'Manual' : '#' . $order->woocommerce_order_id,
-                'client'  => $order->customerFullName(),
-                'product' => $order->is_manual
+                'db_id'               => $order->id,
+                'id'                  => $order->dg_order_code ?? 'DG-' . str_pad($order->id, 3, '0', STR_PAD_LEFT),
+                'woo_id'              => $order->is_manual ? 'Manual' : '#' . $order->woocommerce_order_id,
+                'client'              => $order->customerFullName(),
+                'email'               => $order->customerEmail(),
+                'product'             => $order->is_manual
                     ? ($order->product_name ?? '')
                     : ($firstLineItem?->product_name ?? $order->product_name ?? ''),
-                'due'     => $order->order_due_date?->format('d M Y') ?? '—',
-                'balance' => $order->amount_owing,
-                'notes'   => $order->orderNotes->first()?->content ?? '',
-                'status'  => $order->status,
+                'production_category' => $order->production_category ?? 'cad_casting',
+                'due'                 => $order->order_due_date?->format('d M Y') ?? '—',
+                'total'               => $order->total,
+                'balance'             => $order->amount_owing,
+                'tracking'            => $dispatchTask?->tracking_ref ?? '',
+                'notes'               => $order->orderNotes->first()?->content ?? '',
+                'status'              => $order->status,
             ];
         });
- 
+
+        $fullJobs = $orders->getCollection()->map(fn (Order $order) => $this->buildJobShape($order))->values();
+
         $stats = [
             'total_completed' => Order::where('status', 'completed')->where('is_archived', false)->count(),
             'total_value'     => Order::where('status', 'completed')->where('is_archived', false)->sum('total'),
             'total_collected' => Order::where('status', 'completed')->where('is_archived', false)->sum('amount_paid'),
         ];
- 
+
         return Inertia::render('jobs/completed', [
             'jobs'       => $reportJobs,
+            'full_jobs'  => $fullJobs,
             'stats'      => $stats,
             'pagination' => [
                 'current_page' => $orders->currentPage(),
@@ -375,10 +475,40 @@ class JobsController extends Controller
         ]);
     }
 
+    public function reopen(Order $order): RedirectResponse
+    {
+        $order->update(['status' => 'processing']);
+
+        return redirect()->route('jobs.index');
+    }
+
+    public function complete(Order $order, Request $request): RedirectResponse
+    {
+        $request->validate([
+            'tracking_number' => 'nullable|string|max:255',
+        ]);
+
+        $dispatchTask = $order->tasks()
+            ->whereIn('key', ['dispatch', 'return_to_client'])
+            ->first();
+
+        if ($dispatchTask) {
+            $dispatchTask->update([
+                'tracking_ref' => $request->tracking_number ?? '',
+                'is_done'      => true,
+                'task_date'    => now()->toDateString(),
+            ]);
+        }
+
+        $order->update(['status' => 'completed']);
+
+        return redirect()->route('jobs.completed');
+    }
+
     public function updateProductionCategory(Order $order, Request $request): RedirectResponse
     {
         $request->validate([
-            'production_category' => 'required|in:cad_casting,handmade,supplier_product,custom',
+            'production_category' => 'required|in:cad_casting,handmade,supplier_product,ring_resize,jewellery_repair,custom',
         ]);
  
         $productionCategory = $request->production_category;
@@ -509,6 +639,63 @@ class JobsController extends Controller
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    private function buildJobShape(Order $order): array
+    {
+        $firstLineItem = $order->lineItems->first();
+
+        $productName = $order->is_manual
+            ? ($order->product_name ?? '')
+            : ($order->product_name ?? $firstLineItem?->product_name ?? 'Unknown Product');
+
+        $type = $order->is_manual
+            ? (str_contains(strtolower($order->category ?? ''), 'jewellery') ? 'jewellery' : 'ring')
+            : ($firstLineItem?->category ?? 'jewellery');
+
+        return [
+            'id'                   => $order->id,
+            'job_id'               => $order->dg_order_code ?? 'DG-' . str_pad($order->id, 3, '0', STR_PAD_LEFT),
+            'woo_id'               => $order->is_manual ? 'Manual' : '#' . $order->woocommerce_order_id,
+            'is_manual'            => $order->is_manual,
+            'type'                 => $type,
+            'category'             => $order->category ?? '',
+            'subtype'              => $type === 'ring' ? 'ring_cad' : 'jewellery',
+            'client'               => $order->customerFullName(),
+            'email'                => $order->customerEmail(),
+            'phone'                => $order->customerPhone(),
+            'address'              => $order->address ?? $order->billingAddress(),
+            'product'              => $productName,
+            'line_items'           => $order->lineItems->map(fn ($lineItem) => [
+                'id'           => $lineItem->id,
+                'product_name' => $lineItem->product_name,
+                'category'     => $lineItem->category,
+                'quantity'     => $lineItem->quantity,
+                'total'        => $lineItem->total,
+                'image_url'    => $lineItem->image_url,
+                'meta_data'    => $lineItem->meta_data,
+            ]),
+            'price'                => $order->total,
+            'paid'                 => $order->amount_paid,
+            'owing'                => $order->amount_owing,
+            'payment_type'         => 'deposit_balance',
+            'payment_note'         => $order->payment_note ?? '',
+            'notes'                => $order->orderNotes->map(fn (OrderNote $note) => [
+                'id'         => $note->id,
+                'content'    => $note->content,
+                'created_at' => $note->created_at->toIso8601String(),
+            ])->values()->toArray(),
+            'stone_data'           => $this->buildStoneData($firstLineItem),
+            'tasks'                => $order->tasks,
+            'custom_tasks'         => [],
+            'completed'            => $order->status === 'completed',
+            'status'               => $order->status,
+            'date_paid'            => $order->date_paid?->toDateString(),
+            'created_at'           => $order->woocommerce_created_at->toDateString(),
+            'due_date'             => $order->order_due_date?->toDateString() ?? '',
+            'production_category'  => $order->production_category ?? 'cad_casting',
+            'woocommerce_order_id' => $order->woocommerce_order_id,
+        ];
+    }
 
     private function buildStoneData($lineItem): ?array
     {

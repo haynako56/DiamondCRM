@@ -1,23 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap');
 
 :root {
-  --gold: #B8953F;
-  --gold-light: #D4AF5A;
-  --gold-pale: #F5EDD8;
-  --gold-dark: #7A6029;
-  
-  --ink: #1C1C1C;
-  --ink-mid: #4A4A4A;
-  --ink-soft: #8A8A8A;
-  
-  --surface: #FDFAF5;
-  --surface-2: #F5F0E8;
-  --surface-3: #EDE5D4;
-  
+  --gold: #A67C52;
+  --gold-light: #C4966E;
+  --gold-pale: #F5EDE0;
+  --gold-dark: #7A5A38;
+
+  --nav-active: #B8BDA8;
+
+  --ink: #1E2B2F;
+  --ink-mid: #3D4E52;
+  --ink-soft: #7A8C90;
+
+  --surface: #F4F1EC;
+  --surface-2: #ECE9E3;
+  --surface-3: #E3DED7;
+
   --white: #FFFFFF;
-  --border: #E2D9C8;
-  --border-strong: #C8B99A;
-  
+  --border: #DDD8D0;
+  --border-strong: #C4BDB5;
+
   --green: #2D6A4F;
   --green-bg: #E8F4EE;
   --amber: #92600A;
@@ -27,7 +29,7 @@
   --purple: #4A3A9A;
   --purple-bg: #F0EDFB;
   --menu: #ffffff80;
-  --menu-bg:#b8953f14;
+  --menu-bg: #a67c5218;
   --payment-note-border: #A0BFE0;
 }
 
@@ -250,6 +252,13 @@ h1, h2, h3, h4, h5, h6 {
   border-width: 1.5px;
 }
 
+.job-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-bottom: 9px;
+}
+
 .job-id {
   font-family: 'Cormorant Garamond', serif;
   font-size: 15px;
@@ -438,6 +447,191 @@ select:focus,
 textarea:focus {
   border-color: var(--gold);
 }
+
+/* ── Due date label pills ────────────────────────── */
+.due-label  { font-size: 10px; font-weight: 600; flex-shrink: 0; border-radius: 4px; padding: 1px 5px; }
+.due-red    { background: #C0392B; color: #fff; }
+.due-orange { background: #E67E22; color: #fff; }
+.due-green  { background: var(--green); color: #fff; }
+
+/* ── Status Page ─────────────────────────────────── */
+.status-boards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.status-board {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.status-board-head {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+
+.status-board-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.status-count {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.status-item {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--surface-2);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.status-item:last-child {
+  border-bottom: none;
+}
+
+.status-item:hover {
+  background: var(--surface-2);
+}
+
+.status-item-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.status-woo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.status-name {
+  font-size: 12px;
+  font-weight: 500;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-client {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.status-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.status-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.sb-cad      { background: #E8F0FA; color: #1A4A7A; }
+.sb-prod     { background: var(--green-bg); color: var(--green); }
+.sb-waiting  { background: var(--amber-bg); color: var(--amber); }
+.sb-approved { background: var(--green-bg); color: var(--green); }
+
+.status-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.status-note {
+  font-size: 10px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+  padding: 3px 7px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Button size variant */
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+
+/* ── Jobs List ───────────────────────────────────── */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+
+.job-meta { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+.pipeline { display: flex; gap: 5px; flex-wrap: wrap; }
+.step { display: inline-flex; align-items: center; gap: 3px; padding: 3px 9px; border-radius: 5px; font-size: 11px; border: 1px solid; }
+
+.card-chevron { font-size: 11px; color: var(--ink-soft); transition: transform 0.2s; display: inline-block; margin-left: 4px; }
+.card-chevron.open { transform: rotate(180deg); }
+
+.card-dropdown { display: none; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+.card-dropdown.open { display: block; }
+
+.drop-section { margin-bottom: 10px; }
+.drop-section-head { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-soft); margin-bottom: 5px; }
+.drop-task-row { display: flex; align-items: center; gap: 7px; padding: 3px 0; font-size: 12px; }
+.drop-check { width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid var(--border-strong); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 8px; }
+.drop-check.done { background: var(--green); border-color: var(--green); color: white; }
+.drop-task-name { flex: 1; color: var(--ink-mid); }
+.drop-task-name.done { color: var(--green); font-weight: 500; }
+.drop-task-note { font-size: 10px; color: var(--ink-soft); margin-left: 22px; margin-top: 1px; padding: 3px 6px; background: var(--surface-2); border-radius: 4px; line-height: 1.4; }
+.drop-open-btn { font-size: 11px; color: var(--gold-dark); background: none; border: 1px solid var(--gold); border-radius: 5px; padding: 3px 10px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 500; margin-top: 4px; transition: background 0.15s; }
+.drop-open-btn:hover { background: var(--gold-pale); }
+
+/* ── Reports Page ─────────────────────────────────── */
+.report-table-wrap {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+table.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.report-table th {
+  text-align: left;
+  padding: 9px 13px;
+  background: var(--surface-2);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  font-weight: 500;
+  border-bottom: 1px solid var(--border);
+}
+
+.report-table td {
+  padding: 10px 13px;
+  border-bottom: 1px solid var(--surface-2);
+  vertical-align: top;
+}
+
+.report-table tr:last-child td { border: none; }
+.report-table tbody tr:hover td { background: var(--surface); cursor: pointer; }
 
 /* Responsive */
 @media (max-width: 680px) {

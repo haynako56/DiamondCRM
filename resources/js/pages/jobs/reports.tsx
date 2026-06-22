@@ -1,16 +1,33 @@
 import { Head } from '@inertiajs/react';
-import { router } from '@inertiajs/react';
+import { useState } from 'react';
+import JobPanel from '@/components/jobs/job-panel';
 
 interface ReportJob {
-    id:      string;
-    woo_id:  string;
-    client:  string;
-    product: string;
-    stage:   string;
-    due:     string;
-    balance: number;
-    notes:   string;
-    status:  string;
+    db_id:       number;
+    id:          string;
+    woo_id:      string;
+    client:      string;
+    product:     string;
+    stage:       string;
+    stage_color: string;
+    stage_bg:    string;
+    due:         string;
+    due_raw:     string | null;
+    balance:     number;
+    notes:       string;
+}
+
+interface WeekGroup {
+    label: string;
+    color: string;
+    jobs:  ReportJob[];
+}
+
+interface StageSummary {
+    label: string;
+    count: number;
+    color: string;
+    bg:    string;
 }
 
 interface Stats {
@@ -20,74 +37,58 @@ interface Stats {
     active_jobs:       number;
 }
 
-interface Pagination {
-    current_page: number;
-    last_page:    number;
-    per_page:     number;
-    total:        number;
-    from:         number;
-    to:           number;
-}
-
 interface Props {
-    jobs:          ReportJob[];
+    groups:        WeekGroup[];
+    stage_counts:  StageSummary[];
     stats:         Stats;
-    pagination:    Pagination;
     daniele_email: string;
+    jobs:          any[];
 }
 
-export default function Reports({ jobs, stats, pagination, daniele_email }: Props) {
+function dueDateColor(dueRaw: string | null): string {
+    if (!dueRaw) return '';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due  = new Date(dueRaw);
+    const diff = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff < 0)  return 'var(--red)';
+    if (diff <= 7) return 'var(--amber)';
+    return '';
+}
 
-    const sendToDaniele = () => {
+function groupLabelColor(color: string): string {
+    if (color === 'red')   return 'var(--red)';
+    if (color === 'amber') return 'var(--amber)';
+    return 'var(--ink-soft)';
+}
+
+export default function Reports({ groups, stage_counts, stats, daniele_email, jobs }: Props) {
+    const [selectedJob, setSelectedJob] = useState<any | null>(null);
+
+    const openPanel = (dbId: number) => {
+        const fullJob = jobs.find((job) => job.id === dbId);
+        if (fullJob) setSelectedJob(fullJob);
+    };
+
+    const sendReport = () => {
         const date = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        let report  = `DIAMOND GALLERY — WEEKLY ORDER REPORT\n${date}\n\n`;
 
-        let report = `DIAMOND GALLERY — WEEKLY STATUS REPORT\n`;
-        report    += `${date}\n`;
-        report    += `${'─'.repeat(40)}\n\n`;
-
-        // Summary stats
-        report += `SUMMARY\n`;
-        report += `  Total order value: $${stats.total_order_value.toLocaleString()}\n`;
-        report += `  Collected:         $${stats.collected.toLocaleString()}\n`;
-        report += `  Outstanding:       $${stats.outstanding.toLocaleString()}\n`;
-        report += `  Active jobs:       ${stats.active_jobs}\n\n`;
-
-        report += `${'─'.repeat(40)}\n\n`;
-
-        // All jobs
-        if (jobs.length === 0) {
+        if (groups.length === 0) {
             report += 'No active orders.\n';
         } else {
-            report += `ACTIVE ORDERS\n\n`;
-            jobs.forEach((job) => {
-                report += `${job.id} — ${job.client}\n`;
-                report += `  Order:    ${job.woo_id}\n`;
-                report += `  Product:  ${job.product}\n`;
-                report += `  Stage:    ${job.stage}\n`;
-                report += `  Due:      ${job.due || '—'}\n`;
-                report += `  Balance:  ${job.balance > 0 ? '$' + job.balance.toLocaleString() + ' owing' : '✓ Paid'}\n`;
-                if (job.notes) report += `  Notes:    ${job.notes}\n`;
-                report += `\n`;
+            groups.forEach((group) => {
+                report += `\n── ${group.label.toUpperCase()} ──────────────────────\n`;
+                group.jobs.forEach((job) => {
+                    report += `${job.woo_id} | ${job.client} | Due: ${job.due || '—'} | ${job.stage} | Balance: ${job.balance > 0 ? '$' + job.balance.toLocaleString() : '✓ Paid'}\n`;
+                    if (job.notes) report += `   📎 ${job.notes}\n`;
+                });
             });
         }
 
-        const danieleEmail = daniele_email ?? '';
-        const subject      = encodeURIComponent(`Diamond Gallery — Weekly Report — ${new Date().toLocaleDateString('en-AU')}`);
-        const body         = encodeURIComponent(report);
-
-        window.open(`mailto:${danieleEmail}?subject=${subject}&body=${body}`);
-    };
-    const statCards = [
-        { label: 'Total order value', value: `$${stats.total_order_value.toLocaleString()}`, gold: true,  danger: false },
-        { label: 'Collected',         value: `$${stats.collected.toLocaleString()}`,         gold: false, danger: false },
-        { label: 'Outstanding',       value: `$${stats.outstanding.toLocaleString()}`,       gold: false, danger: true  },
-        { label: 'Active jobs',       value: String(stats.active_jobs),                      gold: false, danger: false },
-    ];
-
-    const today = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-
-    const goToPage = (page: number) => {
-        router.get('/jobs/reports', { page }, { preserveScroll: true });
+        const subject = encodeURIComponent(`Diamond Gallery — Weekly Report — ${new Date().toLocaleDateString('en-AU')}`);
+        const body    = encodeURIComponent(report);
+        window.open(`mailto:${daniele_email ?? ''}?subject=${subject}&body=${body}`);
     };
 
     return (
@@ -95,119 +96,143 @@ export default function Reports({ jobs, stats, pagination, daniele_email }: Prop
             <Head title="Reports" />
             <div className="topbar">
                 <h1 className="topbar-title">Weekly Report</h1>
-                <button onClick={sendToDaniele} className="btn btn-gold">✉ Send to Daniele</button>
             </div>
 
-            <div className="content-scroll">
+            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                <div className="content-scroll" style={{ flex: 1, minWidth: 0 }}>
 
-                {/* Stats */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
-                    {statCards.map((stat) => (
-                        <div key={stat.label} className="stat-card">
-                            <p className="stat-label">{stat.label}</p>
-                            <p className={`stat-value ${stat.gold ? 'gold' : stat.danger ? 'danger' : ''}`}>{stat.value}</p>
+                    {/* Stats row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '18px' }}>
+                        <div className="stat-card">
+                            <div className="stat-label">Total value</div>
+                            <div className="stat-value gold">${stats.total_order_value.toLocaleString()}</div>
                         </div>
-                    ))}
-                </div>
-
-                {/* Report Section */}
-                <div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '14px' }}>
-                        <div>
-                            <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 500, marginBottom: '2px' }}>
-                                Status report
-                            </h3>
-                            <p style={{ fontSize: '12px', color: 'var(--ink-soft)' }}>{today}</p>
+                        <div className="stat-card">
+                            <div className="stat-label">Collected</div>
+                            <div className="stat-value">${stats.collected.toLocaleString()}</div>
                         </div>
-                        {/* Showing X–Y of Z */}
-                        <p style={{ fontSize: '12px', color: 'var(--ink-soft)' }}>
-                            Showing {pagination.from}–{pagination.to} of {pagination.total} orders
-                        </p>
+                        <div className="stat-card">
+                            <div className="stat-label">Outstanding</div>
+                            <div className={`stat-value ${stats.outstanding > 0 ? 'danger' : ''}`}>${stats.outstanding.toLocaleString()}</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Active orders</div>
+                            <div className="stat-value">{stats.active_jobs}</div>
+                        </div>
                     </div>
 
-                    {/* Table */}
-                    <div className="bg-white border border-border rounded-lg overflow-hidden">
-                        <table className="w-full text-xs">
-                            <thead>
-                                <tr className="bg-surface-2 border-b border-border">
-                                    <th className="text-left px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Job</th>
-                                    <th className="text-left px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Client</th>
-                                    <th className="text-left px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Product</th>
-                                    <th className="text-left px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Stage</th>
-                                    <th className="text-left px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Due</th>
-                                    <th className="text-right px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Balance</th>
-                                    <th className="text-left px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Notes</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {jobs.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={7} className="px-4 py-8 text-center text-ink-soft">No active orders.</td>
-                                    </tr>
-                                ) : (
-                                    jobs.map((job) => (
-                                        <tr key={job.id} className="border-b border-surface-2 hover:bg-surface transition-colors">
-                                            <td className="px-4 py-3">
-                                                <div className="text-gold-dark font-medium">{job.id}</div>
-                                                <div className="text-ink-soft" style={{ fontSize: '10px' }}>{job.woo_id}</div>
-                                            </td>
-                                            <td className="px-4 py-3 font-medium">{job.client}</td>
-                                            <td className="px-4 py-3 text-ink-mid max-w-[180px] truncate">{job.product}</td>
-                                            <td className="px-4 py-3 text-ink-mid">{job.stage}</td>
-                                            <td
-                                                className="px-4 py-3 whitespace-nowrap font-medium"
-                                                style={{
-                                                    backgroundColor: job.due && new Date(job.due) < new Date() ? 'var(--amber-bg)' : 'var(--green-bg)',
-                                                    color:           job.due && new Date(job.due) < new Date() ? 'var(--amber)'    : 'var(--green)',
-                                                }}
-                                            >
-                                                {job.due}
-                                            </td>
-                                            <td className={`px-4 py-3 font-medium text-right ${job.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                                ${job.balance.toLocaleString()}
-                                            </td>
-                                            <td className="px-4 py-3 text-ink-soft max-w-xs truncate">{job.notes}</td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Pagination Controls */}
-                    {pagination.last_page > 1 && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '16px' }}>
-                            <button
-                                onClick={() => goToPage(pagination.current_page - 1)}
-                                disabled={pagination.current_page === 1}
-                                className="btn"
-                                style={{ opacity: pagination.current_page === 1 ? 0.4 : 1 }}
-                            >
-                                ← Prev
-                            </button>
-
-                            {Array.from({ length: pagination.last_page }, (_, index) => index + 1).map((page) => (
-                                <button
-                                    key={page}
-                                    onClick={() => goToPage(page)}
-                                    className={page === pagination.current_page ? 'btn btn-gold' : 'btn'}
-                                    style={{ minWidth: '36px' }}
-                                >
-                                    {page}
-                                </button>
-                            ))}
-
-                            <button
-                                onClick={() => goToPage(pagination.current_page + 1)}
-                                disabled={pagination.current_page === pagination.last_page}
-                                className="btn"
-                                style={{ opacity: pagination.current_page === pagination.last_page ? 0.4 : 1 }}
-                            >
-                                Next →
-                            </button>
+                    {/* Status breakdown card */}
+                    {stage_counts.length > 0 && (
+                        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px 16px', marginBottom: '16px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--ink-soft)', marginBottom: '10px' }}>
+                                Status breakdown
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
+                                {stage_counts.map((stageSummary) => (
+                                    <div
+                                        key={stageSummary.label}
+                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 12px', borderRadius: '20px', background: stageSummary.bg, border: `1px solid ${stageSummary.color}44` }}
+                                    >
+                                        <span style={{ fontSize: '13px', fontWeight: 600, color: stageSummary.color }}>{stageSummary.count}</span>
+                                        <span style={{ fontSize: '11px', color: stageSummary.color }}>{stageSummary.label}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
+
+                    {/* Orders by week header + email button */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '19px', fontWeight: 500 }}>Orders by week</div>
+                        <button onClick={sendReport} className="btn btn-gold btn-sm">✉ Email report</button>
+                    </div>
+
+                    {/* Weekly groups */}
+                    {groups.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '50px 20px', color: 'var(--ink-soft)' }}>
+                            <div style={{ fontSize: '32px', opacity: 0.25, marginBottom: '8px' }}>◈</div>
+                            <p>No active orders.</p>
+                        </div>
+                    ) : (
+                        groups.map((group) => (
+                            <div key={group.label} style={{ marginBottom: '14px' }}>
+
+                                {/* Divider-style header */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '7px' }}>
+                                    <div style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: groupLabelColor(group.color) }}>
+                                        {group.label}
+                                    </div>
+                                    <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+                                    <div style={{ fontSize: '11px', color: 'var(--ink-soft)' }}>
+                                        {group.jobs.length} order{group.jobs.length !== 1 ? 's' : ''}
+                                    </div>
+                                </div>
+
+                                {/* Table */}
+                                <div className="report-table-wrap">
+                                    <table className="report-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Order</th>
+                                                <th>Client</th>
+                                                <th>Status</th>
+                                                <th>Due</th>
+                                                <th>Balance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {group.jobs.flatMap((job) => [
+                                                <tr key={job.db_id} onClick={() => openPanel(job.db_id)}>
+                                                    <td>
+                                                        <span style={{ fontWeight: 500, color: 'var(--gold)' }}>{job.woo_id}</span>
+                                                        <br />
+                                                        <span style={{ fontSize: '10px', color: 'var(--ink-soft)' }}>{job.id}</span>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontSize: '12px', fontWeight: 500 }}>{job.client}</div>
+                                                        <div style={{ fontSize: '10px', color: 'var(--ink-soft)', maxWidth: '130px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                            {job.product}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '10px', background: job.stage_bg, color: job.stage_color, fontWeight: 500, whiteSpace: 'nowrap' }}>
+                                                            {job.stage}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ color: dueDateColor(job.due_raw), fontSize: '11px', whiteSpace: 'nowrap' }}>
+                                                        {job.due || '—'}
+                                                    </td>
+                                                    <td style={{ color: job.balance > 0 ? 'var(--red)' : 'var(--green)', fontWeight: 500, fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                                        ${job.balance.toLocaleString()}
+                                                    </td>
+                                                </tr>,
+                                                ...(job.notes ? [
+                                                    <tr key={`${job.db_id}-note`}>
+                                                        <td colSpan={5} style={{ padding: '3px 13px 8px', fontSize: '10px', color: 'var(--ink-soft)' }}>
+                                                            📎 {job.notes}
+                                                        </td>
+                                                    </tr>,
+                                                ] : []),
+                                            ])}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                            </div>
+                        ))
+                    )}
+
                 </div>
+
+                {/* Detail panel */}
+                {selectedJob && (
+                    <JobPanel
+                        key={selectedJob.id}
+                        job={selectedJob}
+                        onClose={() => setSelectedJob(null)}
+                        onJobNotesUpdated={() => {}}
+                    />
+                )}
             </div>
         </>
     );

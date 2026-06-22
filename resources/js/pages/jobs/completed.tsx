@@ -1,22 +1,21 @@
-import { Head } from '@inertiajs/react';
-import { router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
+import { useState } from 'react';
+import JobPanel from '@/components/jobs/job-panel';
 
 interface CompletedJob {
-    db_id:   number;
-    id:      string;
-    woo_id:  string;
-    client:  string;
-    product: string;
-    due:     string;
-    balance: number;
-    notes:   string;
-    status:  string;
-}
-
-interface Stats {
-    total_completed: number;
-    total_value:     number;
-    total_collected: number;
+    db_id:               number;
+    id:                  string;
+    woo_id:              string;
+    client:              string;
+    email:               string;
+    product:             string;
+    production_category: string;
+    due:                 string;
+    total:               number;
+    balance:             number;
+    tracking:            string | null;
+    notes:               string;
+    status:              string;
 }
 
 interface Pagination {
@@ -24,33 +23,45 @@ interface Pagination {
     last_page:    number;
     per_page:     number;
     total:        number;
-    from:         number;
-    to:           number;
+    from:         number | null;
+    to:           number | null;
 }
 
 interface Props {
     jobs:       CompletedJob[];
-    stats:      Stats;
+    full_jobs:  any[];
     pagination: Pagination;
 }
 
-export default function Completed({ jobs, stats, pagination }: Props) {
-    const statCards = [
-        { label: 'Total completed',  value: String(stats.total_completed),                  gold: false, danger: false },
-        { label: 'Total value',      value: `$${stats.total_value.toLocaleString()}`,        gold: true,  danger: false },
-        { label: 'Total collected',  value: `$${stats.total_collected.toLocaleString()}`,    gold: false, danger: false },
-    ];
+const CATEGORY_LABELS: Record<string, string> = {
+    cad_casting:      'CAD & Casting',
+    handmade:         'Handmade',
+    supplier_product: 'Supplier Product',
+    ring_resize:      'Ring Resize',
+    jewellery_repair: 'Jewellery Repair',
+    custom:           'Custom',
+};
 
-    const today = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+export default function Completed({ jobs, full_jobs, pagination }: Props) {
+    const [selectedJob, setSelectedJob] = useState<any | null>(null);
 
-    const goToPage = (page: number) => {
-        router.get('/jobs/completed', { page }, { preserveScroll: true });
+    const openPanel = (dbId: number) => {
+        const fullJob = full_jobs.find((job) => job.id === dbId);
+        if (fullJob) setSelectedJob(fullJob);
+    };
+
+    const reopenJob = (job: CompletedJob) => {
+        if (!confirm(`Reopen ${job.id} — ${job.client}? It will move back to Open Orders.`)) return;
+        router.patch(`/orders/${job.db_id}/reopen`, {}, { preserveScroll: false });
     };
 
     const archiveJob = (job: CompletedJob) => {
-        if (!confirm(`Archive order ${job.id}? It will be removed from this list.`)) return;
-
+        if (!confirm(`Archive ${job.id}? It will be removed from this list.`)) return;
         router.patch(`/orders/${job.db_id}`, { is_archived: true }, { preserveScroll: true });
+    };
+
+    const goToPage = (page: number) => {
+        router.get('/jobs/completed', { page }, { preserveScroll: true });
     };
 
     return (
@@ -58,119 +69,139 @@ export default function Completed({ jobs, stats, pagination }: Props) {
             <Head title="Completed Orders" />
             <div className="topbar">
                 <h1 className="topbar-title">Completed Orders</h1>
+                {pagination.from !== null && (
+                    <span style={{ fontSize: '12px', color: 'var(--ink-soft)' }}>
+                        {pagination.from}–{pagination.to} of {pagination.total} orders
+                    </span>
+                )}
             </div>
 
-            <div className="content-scroll">
+            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                <div className="content-scroll" style={{ flex: 1, minWidth: 0 }}>
 
-                {/* Stats */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
-                    {statCards.map((stat) => (
-                        <div key={stat.label} className="stat-card">
-                            <p className="stat-label">{stat.label}</p>
-                            <p className={`stat-value ${stat.gold ? 'gold' : stat.danger ? 'danger' : ''}`}>{stat.value}</p>
+                    {/* Cards */}
+                    {jobs.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ink-soft)' }}>
+                            <div style={{ fontSize: '36px', opacity: 0.2, marginBottom: '10px' }}>✓</div>
+                            <p>No completed orders yet.</p>
                         </div>
-                    ))}
-                </div>
+                    ) : (
+                        <>
+                            {jobs.map((job) => {
+                                const categoryLabel = CATEGORY_LABELS[job.production_category] ?? job.production_category;
+                                const isSelected   = selectedJob?.id === job.db_id;
 
-                {/* Table Section */}
-                <div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '14px' }}>
-                        <div>
-                            <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', fontWeight: 500, marginBottom: '2px' }}>
-                                Completed orders
-                            </h3>
-                            <p style={{ fontSize: '12px', color: 'var(--ink-soft)' }}>{today}</p>
-                        </div>
-                        {pagination.from && (
-                            <p style={{ fontSize: '12px', color: 'var(--ink-soft)' }}>
-                                Showing {pagination.from}–{pagination.to} of {pagination.total} orders
-                            </p>
-                        )}
-                    </div>
+                                return (
+                                    <div
+                                        key={job.db_id}
+                                        className="job-card"
+                                        style={{ opacity: 0.9, borderColor: isSelected ? 'var(--gold)' : undefined, borderWidth: isSelected ? '1.5px' : undefined }}
+                                    >
+                                        {/* Top row */}
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '7px' }}>
+                                            <div style={{ flexShrink: 0 }}>
+                                                <div className="job-id">{job.woo_id}</div>
+                                                <div className="job-woo">{job.id}</div>
+                                            </div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div className="job-product">{job.product}</div>
+                                                <div className="job-client">{job.client}{job.email ? ` · ${job.email}` : ''}</div>
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
+                                                <span style={{ fontSize: '10px', background: 'var(--green-bg)', color: 'var(--green)', padding: '3px 9px', borderRadius: '20px', fontWeight: 500 }}>✓ Completed</span>
+                                                <span style={{ fontSize: '10px', color: 'var(--ink-soft)' }}>{categoryLabel}</span>
+                                            </div>
+                                        </div>
 
-                    {/* Table */}
-                    <div className="bg-white border border-border rounded-lg overflow-hidden">
-                        <table className="w-full text-xs">
-                            <thead>
-                                <tr className="bg-surface-2 border-b border-border">
-                                    <th className="text-left px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Job</th>
-                                    <th className="text-left px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Client</th>
-                                    <th className="text-left px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Product</th>
-                                    <th className="text-left px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Due</th>
-                                    <th className="text-right px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Balance</th>
-                                    <th className="text-left px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Notes</th>
-                                    <th className="text-right px-4 py-3 text-ink-soft uppercase tracking-widest font-medium">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {jobs.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={7} className="px-4 py-8 text-center text-ink-soft">No completed orders yet.</td>
-                                    </tr>
-                                ) : (
-                                    jobs.map((job) => (
-                                        <tr key={job.id} className="border-b border-surface-2 hover:bg-surface transition-colors">
-                                            <td className="px-4 py-3">
-                                                <div className="text-gold-dark font-medium">{job.id}</div>
-                                                <div className="text-ink-soft" style={{ fontSize: '10px' }}>{job.woo_id}</div>
-                                            </td>
-                                            <td className="px-4 py-3 font-medium">{job.client}</td>
-                                            <td className="px-4 py-3 text-ink-mid max-w-[180px] truncate">{job.product}</td>
-                                            <td className="px-4 py-3 whitespace-nowrap">{job.due}</td>
-                                            <td className={`px-4 py-3 font-medium text-right ${job.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                                {job.balance > 0 ? `$${job.balance.toLocaleString()}` : '✓ Paid'}
-                                            </td>
-                                            <td className="px-4 py-3 text-ink-soft max-w-xs truncate">{job.notes}</td>
-                                            <td className="px-4 py-3 text-right">
-                                                <button
-                                                    onClick={() => archiveJob(job)}
-                                                    className="text-xs text-ink-soft border border-border px-2 py-1 rounded hover:border-amber-400 hover:text-amber-700 transition-colors"
-                                                    title="Archive this order"
-                                                >
-                                                    Archive
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                        {/* Meta row */}
+                                        <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--ink-soft)', marginBottom: '6px' }}>
+                                            {job.due && job.due !== '—' && (
+                                                <span>Due: <strong style={{ color: 'var(--ink-mid)' }}>{job.due}</strong></span>
+                                            )}
+                                            {job.tracking && (
+                                                <span>Tracking: <strong style={{ color: 'var(--ink-mid)' }}>{job.tracking}</strong></span>
+                                            )}
+                                            <span>Total: <strong style={{ color: 'var(--ink-mid)' }}>${(job.total || 0).toLocaleString()}</strong></span>
+                                            {job.balance > 0
+                                                ? <span style={{ color: 'var(--red)' }}>Owing: <strong>${job.balance.toLocaleString()}</strong></span>
+                                                : <span style={{ color: 'var(--green)' }}>✓ Fully paid</span>
+                                            }
+                                        </div>
 
-                    {/* Pagination */}
-                    {pagination.last_page > 1 && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '16px' }}>
-                            <button
-                                onClick={() => goToPage(pagination.current_page - 1)}
-                                disabled={pagination.current_page === 1}
-                                className="btn"
-                                style={{ opacity: pagination.current_page === 1 ? 0.4 : 1 }}
-                            >
-                                ← Prev
-                            </button>
+                                        {/* Notes */}
+                                        {job.notes && (
+                                            <div style={{ fontSize: '11px', color: 'var(--ink-mid)', background: 'var(--surface-2)', borderRadius: '5px', padding: '5px 9px', marginBottom: '6px' }}>
+                                                📎 {job.notes}
+                                            </div>
+                                        )}
 
-                            {Array.from({ length: pagination.last_page }, (_, index) => index + 1).map((page) => (
-                                <button
-                                    key={page}
-                                    onClick={() => goToPage(page)}
-                                    className={page === pagination.current_page ? 'btn btn-gold' : 'btn'}
-                                    style={{ minWidth: '36px' }}
-                                >
-                                    {page}
-                                </button>
-                            ))}
+                                        {/* Actions */}
+                                        <div style={{ marginTop: '8px', display: 'flex', gap: '7px' }}>
+                                            <button className="btn btn-sm" onClick={() => openPanel(job.db_id)}>
+                                                View details
+                                            </button>
+                                            <button className="btn btn-sm" onClick={() => reopenJob(job)}>
+                                                ↩ Reopen
+                                            </button>
+                                            <button
+                                                className="btn btn-sm"
+                                                onClick={() => archiveJob(job)}
+                                                style={{ marginLeft: 'auto', color: 'var(--ink-soft)' }}
+                                            >
+                                                Archive
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
 
-                            <button
-                                onClick={() => goToPage(pagination.current_page + 1)}
-                                disabled={pagination.current_page === pagination.last_page}
-                                className="btn"
-                                style={{ opacity: pagination.current_page === pagination.last_page ? 0.4 : 1 }}
-                            >
-                                Next →
-                            </button>
-                        </div>
+                            {/* Pagination */}
+                            {pagination.last_page > 1 && (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '16px' }}>
+                                    <button
+                                        onClick={() => goToPage(pagination.current_page - 1)}
+                                        disabled={pagination.current_page === 1}
+                                        className="btn"
+                                        style={{ opacity: pagination.current_page === 1 ? 0.4 : 1 }}
+                                    >
+                                        ← Prev
+                                    </button>
+
+                                    {Array.from({ length: pagination.last_page }, (_, index) => index + 1).map((page) => (
+                                        <button
+                                            key={page}
+                                            onClick={() => goToPage(page)}
+                                            className={page === pagination.current_page ? 'btn btn-gold' : 'btn'}
+                                            style={{ minWidth: '36px' }}
+                                        >
+                                            {page}
+                                        </button>
+                                    ))}
+
+                                    <button
+                                        onClick={() => goToPage(pagination.current_page + 1)}
+                                        disabled={pagination.current_page === pagination.last_page}
+                                        className="btn"
+                                        style={{ opacity: pagination.current_page === pagination.last_page ? 0.4 : 1 }}
+                                    >
+                                        Next →
+                                    </button>
+                                </div>
+                            )}
+                        </>
                     )}
+
                 </div>
+
+                {/* Detail panel */}
+                {selectedJob && (
+                    <JobPanel
+                        key={selectedJob.id}
+                        job={selectedJob}
+                        onClose={() => setSelectedJob(null)}
+                        onJobNotesUpdated={() => {}}
+                    />
+                )}
             </div>
         </>
     );

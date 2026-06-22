@@ -24,6 +24,7 @@ function taskDateLabel(taskKey: string): string {
         dispatch:           'Dispatch date',
         supplier_order:     'Order date',
         delivery_confirmed: 'Delivery date',
+        return_to_client:   'Return date',
     };
     return labels[taskKey] ?? 'Date';
 }
@@ -644,8 +645,10 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
         woocommerce_order_id: job.woocommerce_order_id ?? '',
     });
 
-    const [isCompleted, setIsCompleted] = useState(job.completed ?? false);
-    const [dueDate, setDueDate]           = useState(job.due_date ? job.due_date.substring(0, 10) : '');
+    const [isCompleted, setIsCompleted]             = useState(job.completed ?? false);
+    const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
+    const [trackingInput, setTrackingInput]             = useState('');
+    const [dueDate, setDueDate]                         = useState(job.due_date ? job.due_date.substring(0, 10) : '');
 
     const [savedPayment, setSavedPayment] = useState({
         price:        job.price,
@@ -967,13 +970,7 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
                             </button>
                             {!isCompleted && (
                                 <button
-                                    onClick={() => {
-                                        setIsCompleted(true);
-                                        router.patch(`/orders/${job.id}`, { status: 'completed' }, {
-                                            preserveScroll: true,
-                                            preserveState:  true,
-                                        });
-                                    }}
+                                    onClick={() => { setTrackingInput(''); setIsCompleteModalOpen(true); }}
                                     className="flex-1 text-xs px-3 py-1 bg-gold text-white rounded hover:!bg-gold-dark transition-colors font-medium flex items-center justify-center gap-1"
                                 >
                                     ✓ Complete
@@ -1019,6 +1016,41 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
                     onSave={(updated) => setSavedPayment(updated)}
                     onClose={() => setIsPaymentModalOpen(false)}
                 />
+            )}
+
+            {/* Mark complete modal */}
+            {isCompleteModalOpen && (
+                <div className="modal-overlay open" onClick={() => setIsCompleteModalOpen(false)}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <h3>Mark order complete</h3>
+                        <p>Enter tracking / pickup number for {job.client}:</p>
+                        <input
+                            type="text"
+                            value={trackingInput}
+                            onChange={(e) => setTrackingInput(e.target.value)}
+                            placeholder="Tracking number or pickup ref"
+                            autoFocus
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') e.currentTarget.form?.requestSubmit();
+                            }}
+                        />
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
+                            <button className="btn" onClick={() => setIsCompleteModalOpen(false)}>Cancel</button>
+                            <button
+                                className="btn btn-gold"
+                                onClick={() => {
+                                    setIsCompleteModalOpen(false);
+                                    setIsCompleted(true);
+                                    router.patch(`/orders/${job.id}/complete`, {
+                                        tracking_number: trackingInput,
+                                    });
+                                }}
+                            >
+                                ✓ Mark complete
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </>
     );

@@ -41,31 +41,26 @@ export default function JobsIndex({ jobs, stats }) {
     return (
         <>
             <Head title="Orders Management" />
-            <div className="flex h-full overflow-hidden bg-surface">
-                {/* Main Content */}
-                <div className="flex-1 flex flex-col overflow-hidden">
-                    {/* Top Bar */}
-                    <div className="bg-white border-b border-border px-6 h-14 flex items-center justify-between flex-shrink-0">
-                        <h1 className="font-serif text-xl font-medium">All Orders</h1>
-                        <div className="flex gap-2">
+            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <div className="topbar">
+                        <h1 className="topbar-title">All Orders</h1>
+                        <div style={{ display: 'flex', gap: '8px' }}>
                             <button
                                 onClick={handleSync}
                                 disabled={isSyncing}
-                                className="text-xs px-3 py-1.5 border border-border rounded hover:!border-gold transition-colors disabled:opacity-50"
+                                className="btn"
+                                style={{ opacity: isSyncing ? 0.5 : 1 }}
                             >
                                 {isSyncing ? 'Syncing…' : '⟳ Sync WooCommerce'}
                             </button>
-                            <button
-                                onClick={() => setIsModalOpen(true)}
-                                className="text-xs px-3 py-1.5 bg-gold text-white rounded hover:!bg-gold-dark transition-colors font-medium"
-                            >
+                            <button onClick={() => setIsModalOpen(true)} className="btn btn-gold">
                                 + New Order
                             </button>
                         </div>
                     </div>
 
-                    {/* Content Scroll */}
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="content-scroll">
                         <JobsList
                             jobs={jobsWithUpdatedNotes}
                             stats={stats}
@@ -78,7 +73,6 @@ export default function JobsIndex({ jobs, stats }) {
                     </div>
                 </div>
 
-                {/* Detail Panel — key forces a full remount when a different job is selected */}
                 {selectedJob && (
                     <JobPanel
                         key={selectedJob.id}
