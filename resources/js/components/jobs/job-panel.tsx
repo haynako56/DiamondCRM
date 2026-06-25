@@ -272,6 +272,7 @@ function EditPaymentModal({ job, savedPayment, onSave, onClose }) {
 function OrderTask({ task, orderId, onDeleted }) {
     const [isDone, setIsDone]                       = useState(Boolean(task.is_done));
     const [taskDate, setTaskDate]                   = useState(task.task_date ? task.task_date.substring(0, 10) : '');
+    const [receivedDate, setReceivedDate]           = useState(task.received_date ? task.received_date.substring(0, 10) : '');
     const [note, setNote]                           = useState(task.note ?? '');
     const [progress, setProgress]                   = useState(task.progress ?? 'Not started');
     const [trackingRef, setTrackingRef]             = useState(task.tracking_ref ?? '');
@@ -349,6 +350,12 @@ function OrderTask({ task, orderId, onDeleted }) {
                         <span className="text-xs text-ink-soft w-28 flex-shrink-0">{taskDateLabel(task.key)}</span>
                         <input type="date" value={taskDate} onChange={(e) => { setTaskDate(e.target.value); saveToServer({ task_date: e.target.value }); }} className="flex-1 text-xs border border-border rounded px-2 py-1.5" />
                     </div>
+                    {task.key === 'cad_send' && (
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs text-ink-soft w-28 flex-shrink-0">CAD received</span>
+                            <input type="date" value={receivedDate} onChange={(e) => { setReceivedDate(e.target.value); saveToServer({ received_date: e.target.value }); }} className="flex-1 text-xs border border-border rounded px-2 py-1.5" />
+                        </div>
+                    )}
                     {showNoteInput ? (
                         <div className="space-y-2">
                             <textarea value={draftNote} onChange={(e) => setDraftNote(e.target.value)} rows={3} placeholder="Add a note..." className="w-full text-xs border border-gold rounded px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-gold" autoFocus />
@@ -626,7 +633,7 @@ function EditProductionModal({ job, currentCategory, onSave, onClose }) {
 
 // ─── Main Panel ───────────────────────────────────────────────────────────────
 
-export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
+export default function JobPanel({ job, onClose, onJobNotesUpdated, inline = false }) {
     const [tasks, setTasks]                         = useState(job.tasks ?? []);
     const [showAddTaskForm, setShowAddTaskForm]      = useState(false);
     const [jobNotes, setJobNotes]                   = useState<OrderNote[]>(Array.isArray(job.notes) ? job.notes : []);
@@ -732,6 +739,109 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
         window.open(`mailto:?subject=${subject}&body=${body}`);
     };
 
+    const printPackingSlip = () => {
+        const balance  = Math.max(0, (job.price ?? 0) - (job.paid ?? 0));
+        const today    = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+        const dueFormatted = dueDate
+            ? new Date(dueDate).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })
+            : '—';
+
+        const stone    = job.stone_data as Record<string, string> | null | undefined;
+        const stoneRows = stone
+            ? [
+                stone.carat       ? `<tr><td class="sl">Diamond</td><td>${stone.carat}${stone.stoneType ? ' ' + stone.stoneType : ''}</td></tr>` : '',
+                (stone.cut || stone.colour || stone.clarity)
+                    ? `<tr><td class="sl">Cut / Colour / Clarity</td><td>${[stone.cut, stone.colour, stone.clarity].filter(Boolean).join(' / ')}</td></tr>` : '',
+                stone.polish      ? `<tr><td class="sl">Polish</td><td>${stone.polish}</td></tr>` : '',
+                stone.symmetry    ? `<tr><td class="sl">Symmetry</td><td>${stone.symmetry}</td></tr>` : '',
+                stone.measurements ? `<tr><td class="sl">Measurements</td><td>${stone.measurements}</td></tr>` : '',
+                stone.ringSize    ? `<tr><td class="sl">Ring size</td><td>${stone.ringSize}</td></tr>` : '',
+                stone.material    ? `<tr><td class="sl">Metal</td><td>${stone.material}</td></tr>` : '',
+                stone.bandWidth   ? `<tr><td class="sl">Band width</td><td>${stone.bandWidth}</td></tr>` : '',
+                stone.certificateNumber ? `<tr><td class="sl">Certificate</td><td>${stone.certificateNumber}</td></tr>` : '',
+                stone.cert        ? `<tr><td class="sl">Certificate</td><td><a href="${stone.cert}" target="_blank" style="color:#A67C52">${stone.cert}</a></td></tr>` : '',
+            ].join('')
+            : '';
+
+        const latestNote = Array.isArray(job.notes) && job.notes.length > 0
+            ? (job.notes as { content: string }[]).map(n => n.content).join('\n\n')
+            : '';
+
+        const notesHtml = latestNote
+            ? `<div class="section-head">Notes</div><div class="notes-box">${latestNote.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`
+            : '';
+
+        const stoneSection = stoneRows
+            ? `<div class="section-head">Diamond / Stone spec</div><table>${stoneRows}</table>`
+            : '';
+
+        const win = window.open('', '_blank', 'width=700,height=900');
+        if (!win) return;
+        win.document.write(`<!DOCTYPE html><html><head><title>Packing Slip — ${job.woo_id}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'DM Sans',Helvetica,Arial,sans-serif;font-size:13px;color:#1E2B2F;padding:32px 40px;max-width:680px;margin:0 auto}
+  .logo{font-family:Georgia,serif;font-size:22px;color:#A67C52;letter-spacing:0.04em;margin-bottom:4px}
+  .logo-sub{font-size:10px;color:#7A8C90;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:28px}
+  .slip-title{font-size:18px;font-weight:600;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid #A67C52}
+  table{width:100%;border-collapse:collapse;margin-bottom:20px}
+  td{padding:7px 10px;border-bottom:1px solid #E4E0D6;vertical-align:top}
+  td.sl{color:#7A8C90;width:160px;font-size:12px;white-space:nowrap}
+  .section-head{font-size:10px;text-transform:uppercase;letter-spacing:0.09em;color:#7A8C90;font-weight:600;margin:18px 0 6px;padding-bottom:4px;border-bottom:1px solid #C8C4B8}
+  .balance-box{background:#F5F1EC;border:1px solid #C8C4B8;border-radius:6px;padding:12px 16px;margin-top:6px;display:flex;justify-content:space-between;align-items:center}
+  .balance-label{font-size:12px;color:#7A8C90}
+  .balance-amount{font-size:20px;font-weight:700;color:${balance > 0 ? '#8B2020' : '#2D6A4F'}}
+  .notes-box{background:#F5F1EC;border-left:3px solid #A67C52;padding:8px 12px;font-size:12px;color:#3D4E52;margin-bottom:16px;white-space:pre-wrap;line-height:1.6}
+  .footer{margin-top:32px;padding-top:16px;border-top:1px solid #E4E0D6;font-size:10px;color:#7A8C90;text-align:center;line-height:1.6}
+  @media print{button{display:none}}
+</style></head><body>
+<div class="logo">Diamond Gallery</div>
+<div class="logo-sub">Custom Jewellery · Sydney</div>
+<div class="slip-title">Packing Slip</div>
+
+<div class="section-head">Order details</div>
+<table>
+  <tr><td class="sl">Order number</td><td><strong>${job.woo_id}</strong> (${job.job_id})</td></tr>
+  <tr><td class="sl">Date printed</td><td>${today}</td></tr>
+  <tr><td class="sl">Due date</td><td>${dueFormatted}</td></tr>
+</table>
+
+<div class="section-head">Client</div>
+<table>
+  <tr><td class="sl">Name</td><td>${savedDetails.client}</td></tr>
+  <tr><td class="sl">Email</td><td>${savedDetails.email}</td></tr>
+  ${job.phone ? `<tr><td class="sl">Phone</td><td>${job.phone}</td></tr>` : ''}
+  ${job.address ? `<tr><td class="sl">Address</td><td>${job.address}</td></tr>` : ''}
+</table>
+
+<div class="section-head">Product</div>
+<table>
+  <tr><td class="sl">Description</td><td>${savedDetails.product}</td></tr>
+</table>
+
+${stoneSection}
+${notesHtml}
+
+<div class="section-head">Payment</div>
+<table>
+  <tr><td class="sl">Total price</td><td>$${(job.price ?? 0).toLocaleString()}</td></tr>
+  <tr><td class="sl">Amount paid</td><td style="color:#2D6A4F">$${(job.paid ?? 0).toLocaleString()}</td></tr>
+</table>
+<div class="balance-box">
+  <span class="balance-label">${balance > 0 ? 'Balance owing on collection' : 'Fully paid — no payment required'}</span>
+  <span class="balance-amount">${balance > 0 ? '$' + balance.toLocaleString() : '✓ Paid'}</span>
+</div>
+
+<div class="footer">
+  Diamond Gallery Co · diamondgallery.com.au<br>
+  Thank you for your order — we look forward to seeing you soon.
+</div>
+<br>
+<button onclick="window.print()" style="margin-top:16px;padding:10px 20px;background:#A67C52;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨 Print packing slip</button>
+</body></html>`);
+        win.document.close();
+    };
+
     const emailClient = () => {
         const firstName = savedDetails.client.split(' ')[0];
         const subject   = encodeURIComponent(`Update on your Diamond Gallery order — ${job.job_id}`);
@@ -748,7 +858,7 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
 
     return (
         <>
-            <div className="w-96 bg-white border-l border-border overflow-y-auto shadow-lg self-stretch min-h-0">
+            <div className={inline ? 'inline-panel' : 'w-96 bg-white border-l border-border overflow-y-auto shadow-lg self-stretch min-h-0'}>
                 <div className="sticky top-0 bg-white border-b border-border p-5 flex items-start justify-between">
                     <div>
                         <div className="text-xs text-ink-soft uppercase tracking-widest">Order {job.woo_id} · {job.job_id}</div>
@@ -955,12 +1065,18 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated }) {
                     {/* Actions */}
                     <section>
                         <h3 className="text-xs font-semibold text-ink-soft uppercase tracking-wider mb-3 pb-2 border-b border-border">Actions</h3>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                             <button
                                 onClick={emailClient}
                                 className="flex-1 text-xs px-3 py-1 border border-border rounded hover:!border-gold transition-colors font-medium flex items-center justify-center gap-1"
                             >
                                 ✉ Email client
+                            </button>
+                            <button
+                                onClick={printPackingSlip}
+                                className="flex-1 text-xs px-3 py-1 border border-border rounded hover:!border-gold transition-colors font-medium flex items-center justify-center gap-1"
+                            >
+                                🖨 Packing Slip
                             </button>
                             <button
                                 onClick={sendJobReport}

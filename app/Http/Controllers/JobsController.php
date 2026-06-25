@@ -196,86 +196,108 @@ class JobsController extends Controller
             ->get();
 
         $sentToCad         = [];
+        $awaitingApproval  = [];
         $danieleProduction = [];
+        $awaitingCollection = [];
         $allOpen           = [];
 
         foreach ($orders as $order) {
-            $firstLineItem  = $order->lineItems->first();
-            $sortedTasks    = $order->tasks->sortBy('sort_order');
-            $pendingTask    = $sortedTasks->where('is_done', false)->first();
-            $productionTask = $sortedTasks->where('key', 'production')->first();
-            $cadSendTask    = $sortedTasks->where('key', 'cad_send')->first();
-            $cadApproveTask = $sortedTasks->where('key', 'cad_approve')->first();
-            $castingTask    = $sortedTasks->where('key', 'casting')->first();
-            $dispatchTask   = $sortedTasks->where('key', 'dispatch')->first();
-            $returnTask     = $sortedTasks->where('key', 'return_to_client')->first();
-            $category       = $order->production_category ?? 'cad_casting';
+            $firstLineItem     = $order->lineItems->first();
+            $sortedTasks       = $order->tasks->sortBy('sort_order');
+            $pendingTask       = $sortedTasks->where('is_done', false)->first();
+            $productionTask    = $sortedTasks->where('key', 'production')->first();
+            $cadSendTask       = $sortedTasks->where('key', 'cad_send')->first();
+            $cadApproveTask    = $sortedTasks->where('key', 'cad_approve')->first();
+            $castingTask       = $sortedTasks->where('key', 'casting')->first();
+            $dispatchTask      = $sortedTasks->where('key', 'dispatch')->first();
+            $returnTask        = $sortedTasks->where('key', 'return_to_client')->first();
+            $awaitingCollTask  = $sortedTasks->where('key', 'awaiting_collection')->first();
+            $category          = $order->production_category ?? 'cad_casting';
+
+            $cadReceived  = $cadSendTask?->received_date !== null;
+            $finalTaskDone = ($dispatchTask?->is_done || $returnTask?->is_done);
 
             $job = [
-                'db_id'               => $order->id,
-                'id'                  => $order->dg_order_code ?? 'DG-' . str_pad($order->id, 3, '0', STR_PAD_LEFT),
-                'woo_id'              => $order->is_manual ? 'Manual' : '#' . $order->woocommerce_order_id,
-                'client'              => $order->customerFullName(),
-                'product'             => $order->is_manual
+                'db_id'                     => $order->id,
+                'id'                        => $order->dg_order_code ?? 'DG-' . str_pad($order->id, 3, '0', STR_PAD_LEFT),
+                'woo_id'                    => $order->is_manual ? 'Manual' : '#' . $order->woocommerce_order_id,
+                'client'                    => $order->customerFullName(),
+                'product'                   => $order->is_manual
                     ? ($order->product_name ?? '')
                     : ($firstLineItem?->product_name ?? $order->product_name ?? ''),
-                'stage'               => $pendingTask?->label ?? 'Complete',
-                'due_raw'             => $order->order_due_date?->format('Y-m-d'),
-                'category'            => $category,
-                'cad_sent'            => (bool) ($cadSendTask?->is_done ?? false),
-                'cad_approved'        => (bool) ($cadApproveTask?->is_done ?? false),
-                'cad_send_date'       => $cadSendTask?->task_date?->format('d M Y') ?? '',
-                'casting_done'        => (bool) ($castingTask?->is_done ?? false),
-                'production_progress' => $productionTask?->progress ?? 'Not started',
-                'production_done'     => (bool) ($productionTask?->is_done ?? false),
-                'production_date'     => $productionTask?->task_date?->format('d M Y') ?? '',
-                'cad_note'            => $cadSendTask?->note ?? $cadApproveTask?->note ?? '',
-                'production_note'     => $productionTask?->note ?? '',
+                'stage'                     => $pendingTask?->label ?? 'Complete',
+                'due_raw'                   => $order->order_due_date?->format('Y-m-d'),
+                'category'                  => $category,
+                'balance'                   => max(0, ($order->total ?? 0) - ($order->amount_paid ?? 0)),
+                'cad_sent'                  => (bool) ($cadSendTask?->is_done ?? false),
+                'cad_approved'              => (bool) ($cadApproveTask?->is_done ?? false),
+                'cad_send_date'             => $cadSendTask?->task_date?->format('d M Y') ?? '',
+                'cad_received_date'         => $cadSendTask?->received_date?->format('d M Y') ?? '',
+                'casting_done'              => (bool) ($castingTask?->is_done ?? false),
+                'production_progress'       => $productionTask?->progress ?? 'Not started',
+                'production_done'           => (bool) ($productionTask?->is_done ?? false),
+                'production_date'           => $productionTask?->task_date?->format('d M Y') ?? '',
+                'cad_note'                  => $cadSendTask?->note ?? $cadApproveTask?->note ?? '',
+                'production_note'           => $productionTask?->note ?? '',
+                'awaiting_collection_date'  => $awaitingCollTask?->task_date?->format('d M Y') ?? '',
+                'awaiting_collection_note'  => $awaitingCollTask?->note ?? '',
             ];
 
-            // CAD board: only cad_casting orders where client approval is not yet done
+            // CAD boards: cad_casting orders where approval is not yet done
             if ($category === 'cad_casting' && !($cadApproveTask?->is_done)) {
-                $sentToCad[] = $job;
+                if ($cadReceived) {
+                    $awaitingApproval[] = $job;
+                } else {
+                    $sentToCad[] = $job;
+                }
             }
 
-            // Daniele Production board
+            // Daniele Production: show while production is NOT yet done
             if (!in_array($category, ['supplier_product', 'custom'])) {
                 if (in_array($category, ['ring_resize', 'jewellery_repair'])) {
-                    // Show until return_to_client is done
-                    if (!($returnTask?->is_done)) {
+                    if (!($productionTask?->is_done)) {
                         $danieleProduction[] = $job;
                     }
                 } elseif ($category === 'handmade') {
-                    // Always show until dispatched
-                    if (!($dispatchTask?->is_done)) {
+                    if (!($productionTask?->is_done)) {
                         $danieleProduction[] = $job;
                     }
                 } elseif ($category === 'cad_casting' && $productionTask) {
-                    // Show when casting done OR production started/done, AND not yet dispatched
-                    $productionStarted = $productionTask->is_done
-                        || ($productionTask->progress && $productionTask->progress !== 'Not started')
-                        || ($castingTask?->is_done);
-                    if ($productionStarted && !($dispatchTask?->is_done)) {
+                    // Show when casting is done but production not yet finished
+                    $inProduction = !$productionTask->is_done && (
+                        ($productionTask->progress && $productionTask->progress !== 'Not started')
+                        || $castingTask?->is_done
+                    );
+                    if ($inProduction) {
                         $danieleProduction[] = $job;
                     }
                 }
+            }
+
+            // Awaiting Collection: production done, ring with us, not yet dispatched/returned
+            if ($productionTask?->is_done && !$finalTaskDone && !in_array($category, ['supplier_product', 'custom'])) {
+                $awaitingCollection[] = $job;
             }
 
             $allOpen[] = $job;
         }
 
         $sortByDue = fn ($jobA, $jobB) => strcmp($jobA['due_raw'] ?? '9999', $jobB['due_raw'] ?? '9999');
-        usort($sentToCad,         $sortByDue);
-        usort($danieleProduction, $sortByDue);
-        usort($allOpen,           $sortByDue);
+        usort($sentToCad,          $sortByDue);
+        usort($awaitingApproval,   $sortByDue);
+        usort($danieleProduction,  $sortByDue);
+        usort($awaitingCollection, $sortByDue);
+        usort($allOpen,            $sortByDue);
 
         $jobs = $orders->map(fn (Order $order) => $this->buildJobShape($order))->values();
 
         return Inertia::render('jobs/status', [
-            'sent_to_cad'        => $sentToCad,
-            'daniele_production' => $danieleProduction,
-            'all_open'           => $allOpen,
-            'jobs'               => $jobs,
+            'sent_to_cad'         => $sentToCad,
+            'awaiting_approval'   => $awaitingApproval,
+            'daniele_production'  => $danieleProduction,
+            'awaiting_collection' => $awaitingCollection,
+            'all_open'            => $allOpen,
+            'jobs'                => $jobs,
         ]);
     }
 

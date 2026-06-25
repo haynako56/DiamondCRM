@@ -14,16 +14,18 @@ class OrderTaskController extends Controller
     public function update(Order $order, OrderTask $task, Request $request): RedirectResponse
     {
         $request->validate([
-            'is_done'      => 'boolean',
-            'task_date'    => 'nullable|date',
-            'note'         => 'nullable|string',
-            'progress'     => 'nullable|in:Not Started,In Progress,Quality check,Complete',
-            'tracking_ref' => 'nullable|string',
+            'is_done'       => 'boolean',
+            'task_date'     => 'nullable|date',
+            'received_date' => 'nullable|date',
+            'note'          => 'nullable|string',
+            'progress'      => 'nullable|in:Not Started,In Progress,Quality check,Complete',
+            'tracking_ref'  => 'nullable|string',
         ]);
 
         $task->update($request->only([
             'is_done',
             'task_date',
+            'received_date',
             'note',
             'progress',
             'tracking_ref',

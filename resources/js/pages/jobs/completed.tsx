@@ -1,6 +1,12 @@
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import JobPanel from '@/components/jobs/job-panel';
+
+function ScrollIntoView({ children }: { children: React.ReactNode }) {
+    const ref = useRef<HTMLDivElement>(null);
+    useEffect(() => { ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, []);
+    return <div ref={ref}>{children}</div>;
+}
 
 interface CompletedJob {
     db_id:               number;
@@ -46,6 +52,10 @@ export default function Completed({ jobs, full_jobs, pagination }: Props) {
     const [selectedJob, setSelectedJob] = useState<any | null>(null);
 
     const openPanel = (dbId: number) => {
+        if (selectedJob?.id === dbId) {
+            setSelectedJob(null);
+            return;
+        }
         const fullJob = full_jobs.find((job) => job.id === dbId);
         if (fullJob) setSelectedJob(fullJob);
     };
@@ -76,8 +86,7 @@ export default function Completed({ jobs, full_jobs, pagination }: Props) {
                 )}
             </div>
 
-            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                <div className="content-scroll" style={{ flex: 1, minWidth: 0 }}>
+            <div className="content-scroll">
 
                     {/* Cards */}
                     {jobs.length === 0 ? (
@@ -92,11 +101,8 @@ export default function Completed({ jobs, full_jobs, pagination }: Props) {
                                 const isSelected   = selectedJob?.id === job.db_id;
 
                                 return (
-                                    <div
-                                        key={job.db_id}
-                                        className="job-card"
-                                        style={{ opacity: 0.9, borderColor: isSelected ? 'var(--gold)' : undefined, borderWidth: isSelected ? '1.5px' : undefined }}
-                                    >
+                                    <div key={job.db_id}>
+                                    <div className={`job-card${isSelected ? ' selected' : ''}`} style={{ opacity: 0.9 }}>
                                         {/* Top row */}
                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '7px' }}>
                                             <div style={{ flexShrink: 0 }}>
@@ -138,7 +144,7 @@ export default function Completed({ jobs, full_jobs, pagination }: Props) {
                                         {/* Actions */}
                                         <div style={{ marginTop: '8px', display: 'flex', gap: '7px' }}>
                                             <button className="btn btn-sm" onClick={() => openPanel(job.db_id)}>
-                                                View details
+                                                {isSelected ? '✕ Close details' : 'View details'}
                                             </button>
                                             <button className="btn btn-sm" onClick={() => reopenJob(job)}>
                                                 ↩ Reopen
@@ -151,6 +157,18 @@ export default function Completed({ jobs, full_jobs, pagination }: Props) {
                                                 Archive
                                             </button>
                                         </div>
+                                    </div>
+                                    {isSelected && (
+                                        <ScrollIntoView>
+                                            <JobPanel
+                                                key={job.db_id}
+                                                job={selectedJob}
+                                                inline={true}
+                                                onClose={() => setSelectedJob(null)}
+                                                onJobNotesUpdated={() => {}}
+                                            />
+                                        </ScrollIntoView>
+                                    )}
                                     </div>
                                 );
                             })}
@@ -191,17 +209,6 @@ export default function Completed({ jobs, full_jobs, pagination }: Props) {
                         </>
                     )}
 
-                </div>
-
-                {/* Detail panel */}
-                {selectedJob && (
-                    <JobPanel
-                        key={selectedJob.id}
-                        job={selectedJob}
-                        onClose={() => setSelectedJob(null)}
-                        onJobNotesUpdated={() => {}}
-                    />
-                )}
             </div>
         </>
     );

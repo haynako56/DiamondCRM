@@ -19,13 +19,15 @@ class OrderTask extends Model
         'progress',
         'tracking_ref',
         'task_date',
+        'received_date',
         'note',
     ];
 
     protected $casts = [
-        'is_done'   => 'boolean',
-        'is_custom' => 'boolean',
-        'task_date' => 'date',
+        'is_done'       => 'boolean',
+        'is_custom'     => 'boolean',
+        'task_date'     => 'date',
+        'received_date' => 'date',
     ];
 
     public function order(): BelongsTo

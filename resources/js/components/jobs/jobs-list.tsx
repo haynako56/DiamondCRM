@@ -1,6 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import JobPanel from '@/components/jobs/job-panel';
 
-export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter, expandedCards, toggleCard, onSelectJob }: { jobs: any[]; stats: any; currentFilter: string; setCurrentFilter: (filter: string) => void; expandedCards: Set<any>; toggleCard: (id: any) => void; onSelectJob: (job: any) => void }) {
+function ScrollIntoView({ children }: { children: React.ReactNode }) {
+    const ref = useRef<HTMLDivElement>(null);
+    useEffect(() => { ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, []);
+    return <div ref={ref}>{children}</div>;
+}
+
+export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter, expandedCards, toggleCard, selectedJob, onSelectJob, onJobNotesUpdated }: { jobs: any[]; stats: any; currentFilter: string; setCurrentFilter: (filter: string) => void; expandedCards: Set<any>; toggleCard: (id: any) => void; selectedJob: any; onSelectJob: (job: any) => void; onJobNotesUpdated?: (jobId: number, notes: any[]) => void }) {
 
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -135,16 +142,18 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                 </div>
             ) : (
                 filteredJobs.map((job: any) => {
-                    const isExpanded        = expandedCards.has(job.id);
-                    const steps             = taskSteps(job);
-                    const doneTasks         = steps.filter((step: any) => step.done);
-                    const badge             = paymentBadge(job);
-                    const due               = dueInfo(job.due_date ?? null);
-                    const latestNotes       = (Array.isArray(job.notes) ? job.notes : []).slice(0, 2);
+                    const isExpanded         = expandedCards.has(job.id);
+                    const isSelected         = selectedJob?.id === job.id;
+                    const steps              = taskSteps(job);
+                    const doneTasks          = steps.filter((step: any) => step.done);
+                    const badge              = paymentBadge(job);
+                    const due                = dueInfo(job.due_date ?? null);
+                    const latestNotes        = (Array.isArray(job.notes) ? job.notes : []).slice(0, 2);
                     const currentPaymentNote = paymentNotes[job.id] ?? '';
 
                     return (
-                        <div key={job.id} className="job-card">
+                        <div key={job.id}>
+                        <div className={`job-card${isSelected ? ' selected' : ''}`}>
                             <div onClick={() => toggleCard(job.id)}>
 
                                 {/* Card top */}
@@ -242,10 +251,22 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                                     </div>
                                 )}
 
-                                <button className="drop-open-btn" onClick={(event) => { event.stopPropagation(); onSelectJob(job); }}>
-                                    Open full details →
+                                <button className="drop-open-btn" onClick={(event) => { event.stopPropagation(); onSelectJob(isSelected ? null : job); }}>
+                                    {isSelected ? '✕ Close details' : 'Open full details →'}
                                 </button>
                             </div>
+                        </div>
+                        {isSelected && (
+                            <ScrollIntoView>
+                                <JobPanel
+                                    key={job.id}
+                                    job={job}
+                                    inline={true}
+                                    onClose={() => onSelectJob(null)}
+                                    onJobNotesUpdated={onJobNotesUpdated ?? (() => {})}
+                                />
+                            </ScrollIntoView>
+                        )}
                         </div>
                     );
                 })

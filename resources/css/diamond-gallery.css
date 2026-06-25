@@ -248,8 +248,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .job-card.selected {
-  border-color: var(--gold);
-  border-width: 1.5px;
+  border-color: var(--gold-dark);
+  border-width: 2px;
+  background: var(--gold-pale);
+  box-shadow: 0 0 0 3px rgba(166, 124, 82, 0.18), 0 4px 16px rgba(166, 124, 82, 0.15);
 }
 
 .job-card-top {
@@ -301,6 +303,16 @@ h1, h2, h3, h4, h5, h6 {
   border-left: 1px solid var(--border);
   overflow-y: auto;
   box-shadow: -4px 0 12px rgba(0, 0, 0, 0.08);
+}
+
+.inline-panel {
+  width: 100%;
+  background: var(--white);
+  border: 1.5px solid var(--gold-dark);
+  border-radius: 12px;
+  margin: 4px 0 10px;
+  box-shadow: 0 4px 20px rgba(166, 124, 82, 0.12);
+  overflow: hidden;
 }
 
 .panel-inner {

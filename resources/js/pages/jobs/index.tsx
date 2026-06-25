@@ -1,7 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import JobsList from '@/components/jobs/jobs-list';
-import JobPanel from '@/components/jobs/job-panel';
 import NewJobModal from '@/components/jobs/new-job-modal';
 
 export default function JobsIndex({ jobs, stats }) {
@@ -41,7 +40,7 @@ export default function JobsIndex({ jobs, stats }) {
     return (
         <>
             <Head title="Orders Management" />
-            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     <div className="topbar">
                         <h1 className="topbar-title">All Orders</h1>
@@ -68,19 +67,12 @@ export default function JobsIndex({ jobs, stats }) {
                             setCurrentFilter={setCurrentFilter}
                             expandedCards={expandedCards}
                             toggleCard={toggleCard}
+                            selectedJob={selectedJob}
                             onSelectJob={setSelectedJob}
+                            onJobNotesUpdated={handleJobNotesUpdated}
                         />
                     </div>
                 </div>
-
-                {selectedJob && (
-                    <JobPanel
-                        key={selectedJob.id}
-                        job={selectedJob}
-                        onClose={() => setSelectedJob(null)}
-                        onJobNotesUpdated={handleJobNotesUpdated}
-                    />
-                )}
             </div>
 
             {isModalOpen && <NewJobModal onClose={() => setIsModalOpen(false)} />}
