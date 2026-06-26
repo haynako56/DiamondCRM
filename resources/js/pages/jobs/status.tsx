@@ -17,6 +17,8 @@ interface StatusJob {
     cad_send_date:            string;
     cad_received_date:        string;
     casting_done:             boolean;
+    job_packed_done:          boolean;
+    job_packed_date:          string;
     production_progress:      string;
     production_done:          boolean;
     production_date:          string;
@@ -92,18 +94,7 @@ function AwaitingApprovalItem({ job, onSelect }: { job: StatusJob; onSelect: (db
 }
 
 function ProdItem({ job, onSelect }: { job: StatusJob; onSelect: (dbId: number) => void }) {
-    const due          = dueInfo(job.due_raw);
-    const needsCasting = job.category === 'cad_casting';
-    let stage = '', stageCls = '';
-    if (needsCasting && !job.casting_done) {
-        stage = 'Waiting for casting'; stageCls = 'sb-waiting';
-    } else {
-        const progress = job.production_progress || 'Not started';
-        stage    = progress;
-        stageCls = progress === 'Complete'    ? 'sb-approved'
-                 : progress === 'In Progress' ? 'sb-prod'
-                 : 'sb-waiting';
-    }
+    const due = dueInfo(job.due_raw);
     return (
         <div className="status-item" onClick={() => onSelect(job.db_id)}>
             <div className="status-item-top">
@@ -112,11 +103,15 @@ function ProdItem({ job, onSelect }: { job: StatusJob; onSelect: (dbId: number) 
                 <span className={`due-label ${due.cls}`}>⏱ {due.text}</span>
             </div>
             <div className="status-client">{job.client}</div>
-            <div className="status-meta">
-                {stage && <span className={`status-badge ${stageCls}`}>{stage}</span>}
-                {job.production_date && (
-                    <span style={{ fontSize: '10px', color: 'var(--ink-soft)' }}>Updated {job.production_date}</span>
-                )}
+            <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <div style={{ fontSize: '11px', color: job.job_packed_done ? 'var(--green)' : 'var(--ink-mid)', fontWeight: job.job_packed_done ? 400 : 500 }}>
+                    {job.job_packed_done ? '✓' : '●'} Job Packed to Daniele
+                    {job.job_packed_date && <span style={{ color: 'var(--ink-soft)', fontWeight: 400, marginLeft: '6px' }}>{job.job_packed_date}</span>}
+                </div>
+                <div style={{ fontSize: '11px', color: job.production_done ? 'var(--green)' : 'var(--ink-soft)' }}>
+                    {job.production_done ? '✓' : '○'} Production at Daniele
+                    {job.production_date && <span style={{ marginLeft: '6px' }}>{job.production_date}</span>}
+                </div>
             </div>
             {job.production_note && <div className="status-note">📎 {job.production_note}</div>}
         </div>

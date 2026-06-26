@@ -39,7 +39,8 @@ class OrderTaskDefinitions
             ['key' => 'cad_send',           'label' => 'Send CAD request',          'description' => 'Request CAD design file from designer.'],
             ['key' => 'cad_approve',        'label' => 'Client approves CAD',       'description' => 'Send design to client, await sign-off.'],
             ['key' => 'casting',            'label' => 'Send to casting',           'description' => 'Send approved design to casting.'],
-            ['key' => 'production',          'label' => 'Production — Daniele',      'description' => 'In-house production and setting.'],
+            ['key' => 'job_packed',          'label' => 'Job Packed to Daniele',     'description' => 'Pack the job and send to Daniele for production.'],
+            ['key' => 'production',          'label' => 'Production at Daniele',     'description' => 'In-house production and setting by Daniele.'],
             ['key' => 'awaiting_collection', 'label' => 'Awaiting collection',       'description' => 'Ring is complete and waiting with us for client pickup.'],
             ['key' => 'dispatch',            'label' => 'Dispatch to client',        'description' => 'Send with tracking or arrange pickup.'],
         ];
@@ -48,9 +49,10 @@ class OrderTaskDefinitions
     private static function handmadeTasks(): array
     {
         return [
-            ['key' => 'production',          'label' => 'Production — Daniele', 'description' => 'In-house production and setting.'],
-            ['key' => 'awaiting_collection', 'label' => 'Awaiting collection',   'description' => 'Ring is complete and waiting with us for client pickup.'],
-            ['key' => 'dispatch',            'label' => 'Dispatch to client',    'description' => 'Send with tracking or arrange pickup.'],
+            ['key' => 'job_packed',          'label' => 'Job Packed to Daniele', 'description' => 'Pack the job and send to Daniele for production.'],
+            ['key' => 'production',          'label' => 'Production at Daniele',  'description' => 'In-house production and setting by Daniele.'],
+            ['key' => 'awaiting_collection', 'label' => 'Awaiting collection',    'description' => 'Ring is complete and waiting with us for client pickup.'],
+            ['key' => 'dispatch',            'label' => 'Dispatch to client',     'description' => 'Send with tracking or arrange pickup.'],
         ];
     }
 
@@ -66,18 +68,20 @@ class OrderTaskDefinitions
     private static function ringResizeTasks(): array
     {
         return [
-            ['key' => 'production',          'label' => 'Production — Daniele', 'description' => 'Resize and finish the ring.'],
-            ['key' => 'awaiting_collection', 'label' => 'Awaiting collection',   'description' => 'Ring is complete and waiting with us for client pickup.'],
-            ['key' => 'return_to_client',    'label' => 'Return to client',      'description' => 'Return the completed ring to the client.'],
+            ['key' => 'job_packed',          'label' => 'Job Packed to Daniele', 'description' => 'Pack the job and send to Daniele for production.'],
+            ['key' => 'production',          'label' => 'Production at Daniele',  'description' => 'Resize and finish the ring.'],
+            ['key' => 'awaiting_collection', 'label' => 'Awaiting collection',    'description' => 'Ring is complete and waiting with us for client pickup.'],
+            ['key' => 'return_to_client',    'label' => 'Return to client',       'description' => 'Return the completed ring to the client.'],
         ];
     }
 
     private static function jewelleryRepairTasks(): array
     {
         return [
-            ['key' => 'production',          'label' => 'Production — Daniele', 'description' => 'Carry out the repair.'],
-            ['key' => 'awaiting_collection', 'label' => 'Awaiting collection',   'description' => 'Ring is complete and waiting with us for client pickup.'],
-            ['key' => 'return_to_client',    'label' => 'Return to client',      'description' => 'Return the repaired item to the client.'],
+            ['key' => 'job_packed',          'label' => 'Job Packed to Daniele', 'description' => 'Pack the job and send to Daniele for production.'],
+            ['key' => 'production',          'label' => 'Production at Daniele',  'description' => 'Carry out the repair.'],
+            ['key' => 'awaiting_collection', 'label' => 'Awaiting collection',    'description' => 'Ring is complete and waiting with us for client pickup.'],
+            ['key' => 'return_to_client',    'label' => 'Return to client',       'description' => 'Return the repaired item to the client.'],
         ];
     }
 }

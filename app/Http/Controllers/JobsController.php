@@ -209,6 +209,7 @@ class JobsController extends Controller
             $cadSendTask       = $sortedTasks->where('key', 'cad_send')->first();
             $cadApproveTask    = $sortedTasks->where('key', 'cad_approve')->first();
             $castingTask       = $sortedTasks->where('key', 'casting')->first();
+            $jobPackedTask     = $sortedTasks->where('key', 'job_packed')->first();
             $dispatchTask      = $sortedTasks->where('key', 'dispatch')->first();
             $returnTask        = $sortedTasks->where('key', 'return_to_client')->first();
             $awaitingCollTask  = $sortedTasks->where('key', 'awaiting_collection')->first();
@@ -234,6 +235,8 @@ class JobsController extends Controller
                 'cad_send_date'             => $cadSendTask?->task_date?->format('d M Y') ?? '',
                 'cad_received_date'         => $cadSendTask?->received_date?->format('d M Y') ?? '',
                 'casting_done'              => (bool) ($castingTask?->is_done ?? false),
+                'job_packed_done'           => (bool) ($jobPackedTask?->is_done ?? false),
+                'job_packed_date'           => $jobPackedTask?->task_date?->format('d M Y') ?? '',
                 'production_progress'       => $productionTask?->progress ?? 'Not started',
                 'production_done'           => (bool) ($productionTask?->is_done ?? false),
                 'production_date'           => $productionTask?->task_date?->format('d M Y') ?? '',
@@ -254,18 +257,15 @@ class JobsController extends Controller
 
             // Daniele Production: show while production is NOT yet done
             if (!in_array($category, ['supplier_product', 'custom'])) {
-                if (in_array($category, ['ring_resize', 'jewellery_repair'])) {
-                    if (!($productionTask?->is_done)) {
-                        $danieleProduction[] = $job;
-                    }
-                } elseif ($category === 'handmade') {
+                if (in_array($category, ['ring_resize', 'jewellery_repair', 'handmade'])) {
                     if (!($productionTask?->is_done)) {
                         $danieleProduction[] = $job;
                     }
                 } elseif ($category === 'cad_casting' && $productionTask) {
                     // Show when casting is done but production not yet finished
                     $inProduction = !$productionTask->is_done && (
-                        ($productionTask->progress && $productionTask->progress !== 'Not started')
+                        $jobPackedTask?->is_done
+                        || ($productionTask->progress && $productionTask->progress !== 'Not started')
                         || $castingTask?->is_done
                     );
                     if ($inProduction) {
@@ -364,6 +364,7 @@ class JobsController extends Controller
             'cad_send'           => ['color' => '#1A4A7A', 'bg' => '#E8F0FA'],
             'cad_approve'        => ['color' => '#1A4A7A', 'bg' => '#E8F0FA'],
             'casting'            => ['color' => '#4A3A9A', 'bg' => '#F0EDFB'],
+            'job_packed'         => ['color' => '#2D6A4F', 'bg' => '#E8F4EE'],
             'production'         => ['color' => '#2D6A4F', 'bg' => '#E8F4EE'],
             'dispatch'           => ['color' => '#2D6A4F', 'bg' => '#E8F4EE'],
             'supplier_order'     => ['color' => '#92600A', 'bg' => '#FEF3E2'],

@@ -3,7 +3,6 @@ import { router } from '@inertiajs/react';
 
 // ─── Production Task Component ────────────────────────────────────────────────
 
-const PROGRESS_OPTIONS = ['Not started', 'In Progress', 'Quality check', 'Complete'];
 
 const PAYMENT_PLANS = [
     'Deposit + balance on pickup',
@@ -274,7 +273,6 @@ function OrderTask({ task, orderId, onDeleted }) {
     const [taskDate, setTaskDate]                   = useState(task.task_date ? task.task_date.substring(0, 10) : '');
     const [receivedDate, setReceivedDate]           = useState(task.received_date ? task.received_date.substring(0, 10) : '');
     const [note, setNote]                           = useState(task.note ?? '');
-    const [progress, setProgress]                   = useState(task.progress ?? 'Not started');
     const [trackingRef, setTrackingRef]             = useState(task.tracking_ref ?? '');
     const [showNoteInput, setShowNoteInput]         = useState(false);
     const [draftNote, setDraftNote]                 = useState(task.note ?? '');
@@ -332,14 +330,6 @@ function OrderTask({ task, orderId, onDeleted }) {
                 </div>
 
                 <div className="ml-8 space-y-2">
-                    {task.key === 'production' && (
-                        <div className="flex items-center gap-3">
-                            <span className="text-xs text-ink-soft w-28 flex-shrink-0">Status</span>
-                            <select value={progress} onChange={(e) => { setProgress(e.target.value); saveToServer({ progress: e.target.value }); }} className="flex-1 text-xs border border-border rounded px-2 py-1.5 bg-white">
-                                {PROGRESS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                            </select>
-                        </div>
-                    )}
                     {(task.key === 'dispatch' || task.key === 'supplier_order') && (
                         <div className="flex items-center gap-3">
                             <span className="text-xs text-ink-soft w-28 flex-shrink-0">Tracking ref</span>
