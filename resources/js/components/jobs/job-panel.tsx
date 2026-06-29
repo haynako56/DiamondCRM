@@ -12,18 +12,23 @@ const PAYMENT_PLANS = [
     'Custom arrangement',
 ];
 
+const COLLECTION_METHODS = [
+    'Collect from Showroom',
+    'Dispatch by Aus Post',
+    'Left in Safe',
+];
+
 function taskDateLabel(taskKey: string): string {
     const labels: Record<string, string> = {
-        diamonds_order:     'Order date',
-        diamonds_delivered: 'Received date',
-        cad_send:           'Date sent',
-        cad_approve:        'Approval date',
-        casting:            'Date sent',
-        production:         'Completion date',
-        dispatch:           'Dispatch date',
-        supplier_order:     'Order date',
-        delivery_confirmed: 'Delivery date',
-        return_to_client:   'Return date',
+        diamonds_order:      'Order date',
+        diamonds_delivered:  'Received date',
+        cad_send:            'Date sent',
+        cad_approve:         'Approval date',
+        casting:             'Date sent',
+        production:          'Completion date',
+        supplier_order:      'Order date',
+        delivery_confirmed:  'Delivery date',
+        collection_dispatch: 'Date',
     };
     return labels[taskKey] ?? 'Date';
 }
@@ -268,14 +273,28 @@ function EditPaymentModal({ job, savedPayment, onSave, onClose }) {
 
 // ─── Order Task ───────────────────────────────────────────────────────────────
 
+type TaskNote = { content: string; date: string };
+
+function parseTaskNotes(raw: string | null): TaskNote[] {
+    if (!raw) return [];
+    try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+        return [{ content: raw, date: '' }];
+    } catch {
+        return [{ content: raw, date: '' }];
+    }
+}
+
 function OrderTask({ task, orderId, onDeleted }) {
     const [isDone, setIsDone]                       = useState(Boolean(task.is_done));
     const [taskDate, setTaskDate]                   = useState(task.task_date ? task.task_date.substring(0, 10) : '');
     const [receivedDate, setReceivedDate]           = useState(task.received_date ? task.received_date.substring(0, 10) : '');
-    const [note, setNote]                           = useState(task.note ?? '');
+    const [taskNotes, setTaskNotes]                 = useState<TaskNote[]>(parseTaskNotes(task.note));
     const [trackingRef, setTrackingRef]             = useState(task.tracking_ref ?? '');
+    const [collectionMethod, setCollectionMethod]   = useState(task.progress ?? '');
     const [showNoteInput, setShowNoteInput]         = useState(false);
-    const [draftNote, setDraftNote]                 = useState(task.note ?? '');
+    const [draftNote, setDraftNote]                 = useState('');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const saveToServer = (fields: Record<string, any>) => {
@@ -288,15 +307,23 @@ function OrderTask({ task, orderId, onDeleted }) {
         saveToServer({ is_done: newValue });
     };
 
-    const saveNote = () => {
-        setNote(draftNote);
+    const addTaskNote = () => {
+        if (!draftNote.trim()) return;
+        const entry: TaskNote = {
+            content: draftNote.trim(),
+            date:    new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }),
+        };
+        const updated = [...taskNotes, entry];
+        setTaskNotes(updated);
+        setDraftNote('');
         setShowNoteInput(false);
-        saveToServer({ note: draftNote });
+        saveToServer({ note: JSON.stringify(updated) });
     };
 
-    const cancelNote = () => {
-        setDraftNote(note);
-        setShowNoteInput(false);
+    const deleteTaskNote = (index: number) => {
+        const updated = taskNotes.filter((_, i) => i !== index);
+        setTaskNotes(updated);
+        saveToServer({ note: JSON.stringify(updated) });
     };
 
     const confirmDelete = () => {
@@ -330,7 +357,22 @@ function OrderTask({ task, orderId, onDeleted }) {
                 </div>
 
                 <div className="ml-8 space-y-2">
-                    {(task.key === 'dispatch' || task.key === 'supplier_order') && (
+                    {task.key === 'collection_dispatch' && (
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs text-ink-soft w-28 flex-shrink-0">Method</span>
+                            <select
+                                value={collectionMethod}
+                                onChange={(e) => { setCollectionMethod(e.target.value); saveToServer({ progress: e.target.value }); }}
+                                className="flex-1 text-xs border border-border rounded px-2 py-1.5 bg-white"
+                            >
+                                <option value="">Select method…</option>
+                                {COLLECTION_METHODS.map((method) => (
+                                    <option key={method} value={method}>{method}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+                    {(task.key === 'collection_dispatch' || task.key === 'supplier_order') && (
                         <div className="flex items-center gap-3">
                             <span className="text-xs text-ink-soft w-28 flex-shrink-0">Tracking ref</span>
                             <input type="text" defaultValue={trackingRef} onBlur={(e) => { setTrackingRef(e.target.value); saveToServer({ tracking_ref: e.target.value }); }} placeholder="Enter tracking number" className="flex-1 text-xs border border-border rounded px-2 py-1.5" />
@@ -346,16 +388,23 @@ function OrderTask({ task, orderId, onDeleted }) {
                             <input type="date" value={receivedDate} onChange={(e) => { setReceivedDate(e.target.value); saveToServer({ received_date: e.target.value }); }} className="flex-1 text-xs border border-border rounded px-2 py-1.5" />
                         </div>
                     )}
+                    {taskNotes.map((entry, index) => (
+                        <div key={index} className="group text-xs bg-gold-pale border border-gold-light rounded px-3 py-2 text-ink-mid leading-relaxed flex gap-2 items-start">
+                            <div className="flex-1">
+                                <p>{entry.content}</p>
+                                {entry.date && <p className="text-ink-soft mt-0.5">{entry.date}</p>}
+                            </div>
+                            <button onClick={() => deleteTaskNote(index)} className="opacity-0 group-hover:opacity-100 text-ink-soft hover:text-red-500 transition-colors flex-shrink-0" title="Delete note">✕</button>
+                        </div>
+                    ))}
                     {showNoteInput ? (
                         <div className="space-y-2">
-                            <textarea value={draftNote} onChange={(e) => setDraftNote(e.target.value)} rows={3} placeholder="Add a note..." className="w-full text-xs border border-gold rounded px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-gold" autoFocus />
+                            <textarea value={draftNote} onChange={(e) => setDraftNote(e.target.value)} rows={2} placeholder="Add a note..." className="w-full text-xs border border-gold rounded px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-gold" autoFocus />
                             <div className="flex gap-2">
-                                <button onClick={saveNote} className="text-xs px-3 py-1.5 bg-gold text-white rounded hover:!bg-gold-dark transition-colors font-medium">Save</button>
-                                <button onClick={cancelNote} className="text-xs px-3 py-1.5 border border-border rounded hover:!border-gold transition-colors">Cancel</button>
+                                <button onClick={addTaskNote} disabled={!draftNote.trim()} className="text-xs px-3 py-1.5 bg-gold text-white rounded hover:!bg-gold-dark transition-colors font-medium disabled:opacity-50">Save</button>
+                                <button onClick={() => { setShowNoteInput(false); setDraftNote(''); }} className="text-xs px-3 py-1.5 border border-border rounded hover:!border-gold transition-colors">Cancel</button>
                             </div>
                         </div>
-                    ) : note ? (
-                        <div onClick={() => { setDraftNote(note); setShowNoteInput(true); }} className="text-xs text-ink-mid bg-gold-pale border border-gold-light rounded px-3 py-2 cursor-pointer hover:border-gold transition-colors">{note}</div>
                     ) : (
                         <button onClick={() => setShowNoteInput(true)} className="text-xs text-gold-dark font-medium hover:underline">+ Add note</button>
                     )}
@@ -411,61 +460,14 @@ function AddCustomTaskForm({ orderId, onAdded, onCancel }) {
 
 type OrderNote = { id: number; content: string; created_at: string };
 
-function NoteItem({ jobId, note, onUpdated, onDeleted }: { jobId: number; note: OrderNote; onUpdated: (updated: OrderNote) => void; onDeleted: (id: number) => void }) {
-    const [isEditing, setIsEditing] = useState(false);
-    const [draft, setDraft]         = useState(note.content);
-    const [isSaving, setIsSaving]   = useState(false);
-
-    const handleSave = () => {
-        if (!draft.trim()) return;
-        setIsSaving(true);
-        router.patch(`/orders/${jobId}/notes/${note.id}`, { content: draft.trim() }, {
-            preserveScroll: true,
-            preserveState:  true,
-            onSuccess: () => {
-                onUpdated({ ...note, content: draft.trim() });
-                setIsEditing(false);
-                setIsSaving(false);
-            },
-            onError: () => setIsSaving(false),
-        });
-    };
-
-    const handleCancel = () => {
-        setDraft(note.content);
-        setIsEditing(false);
-    };
-
-    if (isEditing) {
-        return (
-            <div className="space-y-2">
-                <textarea
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    rows={3}
-                    className="w-full text-xs border border-gold rounded px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-gold"
-                    autoFocus
-                />
-                <div className="flex gap-2">
-                    <button onClick={handleSave} disabled={!draft.trim() || isSaving} className="text-xs px-3 py-1.5 bg-gold text-white rounded font-medium hover:!bg-gold-dark transition-colors disabled:opacity-50">
-                        {isSaving ? 'Saving…' : 'Save'}
-                    </button>
-                    <button onClick={handleCancel} className="text-xs px-3 py-1.5 border border-border rounded hover:!border-gold transition-colors">Cancel</button>
-                </div>
-            </div>
-        );
-    }
-
+function NoteItem({ note, onDeleted }: { note: OrderNote; onDeleted: (id: number) => void }) {
     return (
         <div className="group text-xs bg-gold-pale border border-gold-light rounded px-3 py-2 text-ink-mid leading-relaxed flex gap-2 items-start">
-            <div className="flex-1 cursor-pointer" onClick={() => setIsEditing(true)}>
+            <div className="flex-1">
                 <p>{note.content}</p>
                 <p className="text-ink-soft mt-1">{new Date(note.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
             </div>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 flex-shrink-0">
-                <button onClick={() => setIsEditing(true)} className="text-ink-soft hover:text-gold transition-colors" title="Edit note">✎</button>
-                <button onClick={() => onDeleted(note.id)} className="text-ink-soft hover:text-red-500 transition-colors" title="Delete note">✕</button>
-            </div>
+            <button onClick={() => onDeleted(note.id)} className="opacity-0 group-hover:opacity-100 text-ink-soft hover:text-red-500 transition-colors flex-shrink-0" title="Delete note">✕</button>
         </div>
     );
 }
@@ -526,13 +528,7 @@ function JobNotesSection({ jobId, initialNotes, onNotesUpdated }: { jobId: numbe
                     {notes.map((note) => (
                         <NoteItem
                             key={note.id}
-                            jobId={jobId}
                             note={note}
-                            onUpdated={(updated) => {
-                                const updatedNotes = notes.map((existingNote) => existingNote.id === updated.id ? updated : existingNote);
-                                setNotes(updatedNotes);
-                                onNotesUpdated(updatedNotes);
-                            }}
                             onDeleted={handleDelete}
                         />
                     ))}

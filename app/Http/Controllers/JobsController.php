@@ -210,13 +210,12 @@ class JobsController extends Controller
             $cadApproveTask    = $sortedTasks->where('key', 'cad_approve')->first();
             $castingTask       = $sortedTasks->where('key', 'casting')->first();
             $jobPackedTask     = $sortedTasks->where('key', 'job_packed')->first();
-            $dispatchTask      = $sortedTasks->where('key', 'dispatch')->first();
-            $returnTask        = $sortedTasks->where('key', 'return_to_client')->first();
-            $awaitingCollTask  = $sortedTasks->where('key', 'awaiting_collection')->first();
-            $category          = $order->production_category ?? 'cad_casting';
+            $awaitingCollTask       = $sortedTasks->where('key', 'awaiting_collection')->first();
+            $collectionDispatchTask = $sortedTasks->where('key', 'collection_dispatch')->first();
+            $category               = $order->production_category ?? 'cad_casting';
 
-            $cadReceived  = $cadSendTask?->received_date !== null;
-            $finalTaskDone = ($dispatchTask?->is_done || $returnTask?->is_done);
+            $cadReceived   = $cadSendTask?->received_date !== null;
+            $finalTaskDone = (bool) ($collectionDispatchTask?->is_done ?? false);
 
             $job = [
                 'db_id'                     => $order->id,
@@ -244,6 +243,7 @@ class JobsController extends Controller
                 'production_note'           => $productionTask?->note ?? '',
                 'awaiting_collection_date'  => $awaitingCollTask?->task_date?->format('d M Y') ?? '',
                 'awaiting_collection_note'  => $awaitingCollTask?->note ?? '',
+                'collection_method'         => $collectionDispatchTask?->progress ?? '',
             ];
 
             // CAD boards: cad_casting orders where approval is not yet done
@@ -365,11 +365,11 @@ class JobsController extends Controller
             'cad_approve'        => ['color' => '#1A4A7A', 'bg' => '#E8F0FA'],
             'casting'            => ['color' => '#4A3A9A', 'bg' => '#F0EDFB'],
             'job_packed'         => ['color' => '#2D6A4F', 'bg' => '#E8F4EE'],
-            'production'         => ['color' => '#2D6A4F', 'bg' => '#E8F4EE'],
-            'dispatch'           => ['color' => '#2D6A4F', 'bg' => '#E8F4EE'],
-            'supplier_order'     => ['color' => '#92600A', 'bg' => '#FEF3E2'],
-            'delivery_confirmed' => ['color' => '#92600A', 'bg' => '#FEF3E2'],
-            'return_to_client'   => ['color' => '#2D6A4F', 'bg' => '#E8F4EE'],
+            'production'          => ['color' => '#2D6A4F', 'bg' => '#E8F4EE'],
+            'awaiting_collection' => ['color' => '#E67E22', 'bg' => '#FFF0DC'],
+            'collection_dispatch' => ['color' => '#2D6A4F', 'bg' => '#E8F4EE'],
+            'supplier_order'      => ['color' => '#92600A', 'bg' => '#FEF3E2'],
+            'delivery_confirmed'  => ['color' => '#92600A', 'bg' => '#FEF3E2'],
         ];
 
         $stageCounts = [];
@@ -453,8 +453,7 @@ class JobsController extends Controller
 
         $reportJobs = $orders->getCollection()->map(function (Order $order) {
             $firstLineItem = $order->lineItems->first();
-            $dispatchTask  = $order->tasks->firstWhere('key', 'dispatch')
-                ?? $order->tasks->firstWhere('key', 'return_to_client');
+            $dispatchTask  = $order->tasks->firstWhere('key', 'collection_dispatch');
 
             return [
                 'db_id'               => $order->id,
@@ -511,12 +510,12 @@ class JobsController extends Controller
             'tracking_number' => 'nullable|string|max:255',
         ]);
 
-        $dispatchTask = $order->tasks()
-            ->whereIn('key', ['dispatch', 'return_to_client'])
+        $collectionDispatchTask = $order->tasks()
+            ->where('key', 'collection_dispatch')
             ->first();
 
-        if ($dispatchTask) {
-            $dispatchTask->update([
+        if ($collectionDispatchTask) {
+            $collectionDispatchTask->update([
                 'tracking_ref' => $request->tracking_number ?? '',
                 'is_done'      => true,
                 'task_date'    => now()->toDateString(),

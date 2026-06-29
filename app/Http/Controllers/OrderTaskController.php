@@ -18,7 +18,7 @@ class OrderTaskController extends Controller
             'task_date'     => 'nullable|date',
             'received_date' => 'nullable|date',
             'note'          => 'nullable|string',
-            'progress'      => 'nullable|in:Not Started,In Progress,Quality check,Complete',
+            'progress'      => 'nullable|string|max:255',
             'tracking_ref'  => 'nullable|string',
         ]);
 

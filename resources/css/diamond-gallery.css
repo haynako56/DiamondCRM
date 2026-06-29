@@ -82,8 +82,8 @@ h1, h2, h3, h4, h5, h6 {
 .due-soon { color: var(--amber); }
 .due-overdue { color: var(--red); }
 
-.step-done { background-color: var(--green-bg); color: var(--green); border-color: #A8D5B5; font-weight: 600; }
-.step-active { background-color: var(--amber-bg); color: var(--amber); border-color: #F0C070; }
+.step-done { background-color: #2D6A4F; color: #fff; border-color: #1F4F39; font-weight: 600; }
+.step-active { background-color: #D4622A; color: #fff; border-color: #B8501F; font-weight: 600; }
 .step-todo { background-color: var(--surface-2); color: var(--ink-soft); border-color: var(--border); }
 .bg-amber-done { background-color: var(--gold); color: var(--white); border-color: var(--gold); }
 .button-hover-effect{  border-color: var(--border-strong);background-color: var(--surface-2);color: var(--ink);}

@@ -26,6 +26,7 @@ interface StatusJob {
     production_note:          string;
     awaiting_collection_date: string;
     awaiting_collection_note: string;
+    collection_method:        string;
 }
 
 interface Props {
@@ -129,7 +130,7 @@ function AwaitingCollectionItem({ job, onSelect }: { job: StatusJob; onSelect: (
             </div>
             <div className="status-client">{job.client}</div>
             <div className="status-meta">
-                <span className="status-badge sb-approved">Ready for collection</span>
+                <span className="status-badge sb-approved">{job.collection_method || 'Ready for collection'}</span>
                 {job.awaiting_collection_date && (
                     <span style={{ fontSize: '10px', color: 'var(--ink-soft)' }}>Ready since {job.awaiting_collection_date}</span>
                 )}

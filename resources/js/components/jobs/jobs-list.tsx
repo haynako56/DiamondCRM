@@ -163,8 +163,8 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                                         <div className="job-woo">{job.job_id}</div>
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <div className="job-product">{job.product}</div>
-                                        <div className="job-client">{job.client}{job.email ? ' · ' + job.email : ''}</div>
+                                        <div className="job-client" style={{ fontWeight: 600, fontSize: '14px', color: 'var(--ink)' }}>{job.client}</div>
+                                        <div className="job-product" style={{ fontWeight: 400, fontSize: '12px', color: 'var(--ink-soft)', marginTop: '1px' }}>{job.product}</div>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
