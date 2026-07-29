@@ -804,7 +804,7 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated, inline = fal
 <div class="section-head">Product</div>
 <table>
   <tr><td class="sl">Description</td><td>${savedDetails.product}</td></tr>
-  ${job.category ? `<tr><td class="sl">Category</td><td>${job.category}</td></tr>` : ''}
+  ${(job.is_custom_order || job.category) ? `<tr><td class="sl">Category</td><td>${job.is_custom_order ? 'Custom' : job.category}</td></tr>` : ''}
 </table>
 
 ${stoneSection}

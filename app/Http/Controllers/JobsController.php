@@ -683,6 +683,7 @@ class JobsController extends Controller
             'is_manual'            => $order->is_manual,
             'type'                 => $type,
             'category'             => $order->category ?? '',
+            'is_custom_order'      => $this->isCustomOrder($order->meta_data ?? []),
             'subtype'              => $type === 'ring' ? 'ring_cad' : 'jewellery',
             'client'               => $order->customerFullName(),
             'email'                => $order->customerEmail(),
@@ -720,6 +721,12 @@ class JobsController extends Controller
             'production_category'  => $order->production_category ?? 'cad_casting',
             'woocommerce_order_id' => $order->woocommerce_order_id,
         ];
+    }
+
+    private function isCustomOrder(array $metaData): bool
+    {
+        $entry = collect($metaData)->firstWhere('key', '_dg_is_custom_order');
+        return $entry !== null && ($entry['value'] ?? '') === 'yes';
     }
 
     private function buildShippingAddress(array $shipping): string
