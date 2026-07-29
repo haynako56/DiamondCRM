@@ -23,6 +23,7 @@ function taskDateLabel(taskKey: string): string {
         diamonds_order:      'Order date',
         diamonds_delivered:  'Received date',
         cad_send:            'Date sent',
+        cad_received:        'Date received',
         cad_approve:         'Approval date',
         casting:             'Date sent',
         production:          'Completion date',
@@ -289,7 +290,6 @@ function parseTaskNotes(raw: string | null): TaskNote[] {
 function OrderTask({ task, orderId, onDeleted }) {
     const [isDone, setIsDone]                       = useState(Boolean(task.is_done));
     const [taskDate, setTaskDate]                   = useState(task.task_date ? task.task_date.substring(0, 10) : '');
-    const [receivedDate, setReceivedDate]           = useState(task.received_date ? task.received_date.substring(0, 10) : '');
     const [taskNotes, setTaskNotes]                 = useState<TaskNote[]>(parseTaskNotes(task.note));
     const [trackingRef, setTrackingRef]             = useState(task.tracking_ref ?? '');
     const [collectionMethod, setCollectionMethod]   = useState(task.progress ?? '');
@@ -304,7 +304,13 @@ function OrderTask({ task, orderId, onDeleted }) {
     const toggleDone = () => {
         const newValue = !isDone;
         setIsDone(newValue);
-        saveToServer({ is_done: newValue });
+        if (newValue && !taskDate) {
+            const today = new Date().toISOString().split('T')[0];
+            setTaskDate(today);
+            saveToServer({ is_done: newValue, task_date: today });
+        } else {
+            saveToServer({ is_done: newValue });
+        }
     };
 
     const addTaskNote = () => {
@@ -382,12 +388,6 @@ function OrderTask({ task, orderId, onDeleted }) {
                         <span className="text-xs text-ink-soft w-28 flex-shrink-0">{taskDateLabel(task.key)}</span>
                         <input type="date" value={taskDate} onChange={(e) => { setTaskDate(e.target.value); saveToServer({ task_date: e.target.value }); }} className="flex-1 text-xs border border-border rounded px-2 py-1.5" />
                     </div>
-                    {task.key === 'cad_send' && (
-                        <div className="flex items-center gap-3">
-                            <span className="text-xs text-ink-soft w-28 flex-shrink-0">CAD received</span>
-                            <input type="date" value={receivedDate} onChange={(e) => { setReceivedDate(e.target.value); saveToServer({ received_date: e.target.value }); }} className="flex-1 text-xs border border-border rounded px-2 py-1.5" />
-                        </div>
-                    )}
                     {taskNotes.map((entry, index) => (
                         <div key={index} className="group text-xs bg-gold-pale border border-gold-light rounded px-3 py-2 text-ink-mid leading-relaxed flex gap-2 items-start">
                             <div className="flex-1">
@@ -797,12 +797,14 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated, inline = fal
   <tr><td class="sl">Name</td><td>${savedDetails.client}</td></tr>
   <tr><td class="sl">Email</td><td>${savedDetails.email}</td></tr>
   ${job.phone ? `<tr><td class="sl">Phone</td><td>${job.phone}</td></tr>` : ''}
-  ${job.address ? `<tr><td class="sl">Address</td><td>${job.address}</td></tr>` : ''}
+  ${job.address ? `<tr><td class="sl">Billing address</td><td>${job.address}</td></tr>` : ''}
+  ${job.shipping_address ? `<tr><td class="sl">Shipping address</td><td>${job.shipping_address}</td></tr>` : ''}
 </table>
 
 <div class="section-head">Product</div>
 <table>
   <tr><td class="sl">Description</td><td>${savedDetails.product}</td></tr>
+  ${job.category ? `<tr><td class="sl">Category</td><td>${job.category}</td></tr>` : ''}
 </table>
 
 ${stoneSection}

@@ -207,6 +207,7 @@ class JobsController extends Controller
             $pendingTask       = $sortedTasks->where('is_done', false)->first();
             $productionTask    = $sortedTasks->where('key', 'production')->first();
             $cadSendTask       = $sortedTasks->where('key', 'cad_send')->first();
+            $cadReceivedTask   = $sortedTasks->where('key', 'cad_received')->first();
             $cadApproveTask    = $sortedTasks->where('key', 'cad_approve')->first();
             $castingTask       = $sortedTasks->where('key', 'casting')->first();
             $jobPackedTask     = $sortedTasks->where('key', 'job_packed')->first();
@@ -214,7 +215,7 @@ class JobsController extends Controller
             $collectionDispatchTask = $sortedTasks->where('key', 'collection_dispatch')->first();
             $category               = $order->production_category ?? 'cad_casting';
 
-            $cadReceived   = $cadSendTask?->received_date !== null;
+            $cadReceived   = (bool) ($cadReceivedTask?->is_done ?? false);
             $finalTaskDone = (bool) ($collectionDispatchTask?->is_done ?? false);
 
             $job = [
@@ -232,7 +233,7 @@ class JobsController extends Controller
                 'cad_sent'                  => (bool) ($cadSendTask?->is_done ?? false),
                 'cad_approved'              => (bool) ($cadApproveTask?->is_done ?? false),
                 'cad_send_date'             => $cadSendTask?->task_date?->format('d M Y') ?? '',
-                'cad_received_date'         => $cadSendTask?->received_date?->format('d M Y') ?? '',
+                'cad_received_date'         => $cadReceivedTask?->task_date?->format('d M Y') ?? '',
                 'casting_done'              => (bool) ($castingTask?->is_done ?? false),
                 'job_packed_done'           => (bool) ($jobPackedTask?->is_done ?? false),
                 'job_packed_date'           => $jobPackedTask?->task_date?->format('d M Y') ?? '',
@@ -362,6 +363,7 @@ class JobsController extends Controller
             'diamonds_order'     => ['color' => '#92600A', 'bg' => '#FEF3E2'],
             'diamonds_delivered' => ['color' => '#92600A', 'bg' => '#FEF3E2'],
             'cad_send'           => ['color' => '#1A4A7A', 'bg' => '#E8F0FA'],
+            'cad_received'       => ['color' => '#1A4A7A', 'bg' => '#E8F0FA'],
             'cad_approve'        => ['color' => '#1A4A7A', 'bg' => '#E8F0FA'],
             'casting'            => ['color' => '#4A3A9A', 'bg' => '#F0EDFB'],
             'job_packed'         => ['color' => '#2D6A4F', 'bg' => '#E8F4EE'],
@@ -686,6 +688,7 @@ class JobsController extends Controller
             'email'                => $order->customerEmail(),
             'phone'                => $order->customerPhone(),
             'address'              => $order->address ?? $order->billingAddress(),
+            'shipping_address'     => $this->buildShippingAddress($order->shipping ?? []),
             'product'              => $productName,
             'line_items'           => $order->lineItems->map(fn ($lineItem) => [
                 'id'           => $lineItem->id,
@@ -717,6 +720,20 @@ class JobsController extends Controller
             'production_category'  => $order->production_category ?? 'cad_casting',
             'woocommerce_order_id' => $order->woocommerce_order_id,
         ];
+    }
+
+    private function buildShippingAddress(array $shipping): string
+    {
+        $lines = array_filter([
+            $shipping['address_1'] ?? '',
+            $shipping['address_2'] ?? '',
+            $shipping['city']      ?? '',
+            $shipping['state']     ?? '',
+            $shipping['postcode']  ?? '',
+            $shipping['country']   ?? '',
+        ]);
+
+        return implode(', ', $lines);
     }
 
     private function buildStoneData($lineItem): ?array

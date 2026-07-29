@@ -36,7 +36,8 @@ class OrderTaskDefinitions
         return [
             ['key' => 'diamonds_order',      'label' => 'Diamonds — order placed', 'description' => 'Place the diamond order with supplier.'],
             ['key' => 'diamonds_delivered',  'label' => 'Diamonds — delivered',     'description' => 'Confirm diamonds have been received in store.'],
-            ['key' => 'cad_send',            'label' => 'Send CAD request',         'description' => 'Request CAD design file from designer.'],
+            ['key' => 'cad_send',            'label' => 'Send CAD Request',         'description' => 'Request CAD design file from designer.'],
+            ['key' => 'cad_received',        'label' => 'CAD Received',             'description' => 'Confirm CAD design file has been received.'],
             ['key' => 'cad_approve',         'label' => 'Client approves CAD',      'description' => 'Send design to client, await sign-off.'],
             ['key' => 'casting',             'label' => 'Send to casting',          'description' => 'Send approved design to casting.'],
             ['key' => 'job_packed',          'label' => 'Job Packed to Daniele',    'description' => 'Pack the job and send to Daniele for production.'],
