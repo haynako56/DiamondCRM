@@ -193,7 +193,7 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                                 </div>
 
                                 {/* Latest notes */}
-                                {latestNotes.length > 0 && (
+                                {(latestNotes.length > 0 || job.customer_note) && (
                                     <div style={{ marginTop: '7px' }}>
                                         {latestNotes.map((note: any, index: number) => (
                                             <div
@@ -203,6 +203,11 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                                                 📝 {note.content}
                                             </div>
                                         ))}
+                                        {job.customer_note && (
+                                            <div style={{ marginBottom: '4px', fontSize: '11px', color: 'var(--ink-mid)', background: 'var(--gold-pale)', border: '1px solid var(--gold-light)', borderRadius: '5px', padding: '5px 9px', lineHeight: 1.5 }}>
+                                                🛒 {job.customer_note}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
