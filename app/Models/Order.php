@@ -30,6 +30,7 @@ class Order extends Model
         'is_manual',
         'is_archived',
         'payment_note',
+        'customer_note',
         'meta_data',
     ];
 

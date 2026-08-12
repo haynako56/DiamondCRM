@@ -42,6 +42,7 @@ class SyncWooCommerceOrdersJob implements ShouldQueue
                 'transaction_id'         => $wooCommerceOrder['transaction_id'] ?? null,
                 'billing'                => $wooCommerceOrder['billing'],
                 'shipping'               => $wooCommerceOrder['shipping'],
+                'customer_note'          => $wooCommerceOrder['customer_note'] ?? null,
                 'date_paid'              => $wooCommerceOrder['date_paid'],
                 'woocommerce_created_at' => $wooCommerceOrder['date_created'],
             ]);
@@ -63,6 +64,7 @@ class SyncWooCommerceOrdersJob implements ShouldQueue
             'transaction_id'         => $wooCommerceOrder['transaction_id'] ?? null,
             'billing'                => $wooCommerceOrder['billing'],
             'shipping'               => $wooCommerceOrder['shipping'],
+            'customer_note'          => $wooCommerceOrder['customer_note'] ?? null,
             'date_paid'              => $wooCommerceOrder['date_paid'],
             'woocommerce_created_at' => $wooCommerceOrder['date_created'],
         ]);

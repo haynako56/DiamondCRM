@@ -582,6 +582,7 @@ class JobsController extends Controller
                 'transaction_id'         => $wooCommerceOrder['transaction_id'] ?? null,
                 'billing'                => $wooCommerceOrder['billing'],
                 'shipping'               => $wooCommerceOrder['shipping'],
+                'customer_note'          => $wooCommerceOrder['customer_note'] ?? null,
                 'date_paid'              => $wooCommerceOrder['date_paid'],
                 'woocommerce_created_at' => $wooCommerceOrder['date_created'],
                 'meta_data'              => $wooCommerceOrder['meta_data'] ?? null,
@@ -604,6 +605,7 @@ class JobsController extends Controller
             'transaction_id'         => $wooCommerceOrder['transaction_id'] ?? null,
             'billing'                => $wooCommerceOrder['billing'],
             'shipping'               => $wooCommerceOrder['shipping'],
+            'customer_note'          => $wooCommerceOrder['customer_note'] ?? null,
             'date_paid'              => $wooCommerceOrder['date_paid'],
             'woocommerce_created_at' => $wooCommerceOrder['date_created'],
             'dg_order_code'          => 'DG-' . str_pad(Order::max('id') + 1, 5, '0', STR_PAD_LEFT),
@@ -705,6 +707,7 @@ class JobsController extends Controller
             'owing'                => $order->amount_owing,
             'payment_type'         => 'deposit_balance',
             'payment_note'         => $order->payment_note ?? '',
+            'customer_note'        => $order->customer_note ?? '',
             'notes'                => $order->orderNotes->map(fn (OrderNote $note) => [
                 'id'         => $note->id,
                 'content'    => $note->content,

@@ -809,7 +809,10 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated, inline = fal
 
 ${stoneSection}
 ${notesHtml}
-
+${job.customer_note ? `
+<div class="section-head">Customer Note</div>
+<div class="notes-box">${job.customer_note}</div>
+` : ''}
 <div class="section-head">Payment</div>
 <table>
   <tr><td class="sl">Total price</td><td>$${(job.price ?? 0).toLocaleString()}</td></tr>
