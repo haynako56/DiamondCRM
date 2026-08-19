@@ -254,6 +254,30 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 0 0 3px rgba(166, 124, 82, 0.18), 0 4px 16px rgba(166, 124, 82, 0.15);
 }
 
+/* Job sitting on the final Collection / Dispatch step */
+.job-card.at-collection {
+  background: var(--green-bg);
+  border-color: var(--green);
+  border-left: 4px solid var(--green);
+}
+
+.job-card.at-collection:hover {
+  border-color: var(--green);
+  box-shadow: 0 2px 8px rgba(45, 106, 79, 0.18);
+}
+
+.job-card.at-collection.selected {
+  border-color: var(--gold-dark);
+  border-left: 4px solid var(--green);
+  background: var(--gold-pale);
+}
+
+.badge-collection {
+  background: var(--green-bg);
+  color: var(--green);
+  border: 1px solid var(--green);
+}
+
 .job-card-top {
   display: flex;
   align-items: flex-start;

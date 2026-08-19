@@ -39,6 +39,7 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
     const taskSteps = (job: any) => {
         const tasks = (job.tasks ?? []).map((task: any) => ({
             id:    task.id,
+            key:   task.key,
             label: task.label,
             done:  task.is_done,
             date:  task.task_date,
@@ -49,6 +50,12 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
             if (isActive) activeAssigned = true;
             return { ...step, active: isActive };
         });
+    };
+
+    // Job is sitting on the final Collection / Dispatch step — highlight it in the list
+    const isAtCollectionStage = (job: any) => {
+        const activeStep = taskSteps(job).find((step: any) => step.active);
+        return !job.completed && activeStep?.key === 'collection_dispatch';
     };
 
     const needsAction = (job: any) => {
@@ -150,10 +157,11 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                     const due                = dueInfo(job.due_date ?? null);
                     const latestNotes        = (Array.isArray(job.notes) ? job.notes : []).slice(0, 2);
                     const currentPaymentNote = paymentNotes[job.id] ?? '';
+                    const atCollection       = isAtCollectionStage(job);
 
                     return (
                         <div key={job.id}>
-                        <div className={`job-card${isSelected ? ' selected' : ''}`}>
+                        <div className={`job-card${isSelected ? ' selected' : ''}${atCollection ? ' at-collection' : ''}`}>
                             <div onClick={() => toggleCard(job.id)}>
 
                                 {/* Card top */}
@@ -174,6 +182,7 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                                             <span className={`card-chevron ${isExpanded ? 'open' : ''}`}>▾</span>
                                         </div>
                                         <span className={`badge ${badge.cls}`}>{badge.label}</span>
+                                        {atCollection && <span className="badge badge-collection">📦 Collection / Dispatch</span>}
                                     </div>
                                 </div>
 
