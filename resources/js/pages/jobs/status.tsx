@@ -38,6 +38,38 @@ interface Props {
     jobs:                any[];
 }
 
+interface TaskNote {
+    content: string;
+    date:    string;
+}
+
+// Task notes are stored as a JSON array on the task. Fall back to plain text for older notes.
+function parseTaskNotes(raw: string | null): TaskNote[] {
+    if (!raw) return [];
+    try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+        return [{ content: raw, date: '' }];
+    } catch {
+        return [{ content: raw, date: '' }];
+    }
+}
+
+function TaskNotes({ rawNote }: { rawNote: string | null }) {
+    const notes = parseTaskNotes(rawNote);
+    if (notes.length === 0) return null;
+    return (
+        <>
+            {notes.map((note, index) => (
+                <div key={index} className="status-note">
+                    📎 {note.content}
+                    {note.date && <span style={{ marginLeft: '6px', opacity: 0.7 }}>{note.date}</span>}
+                </div>
+            ))}
+        </>
+    );
+}
+
 function dueInfo(dueRaw: string | null): { cls: string; text: string } {
     if (!dueRaw) return { cls: 'due-ok', text: '—' };
     const today = new Date();
@@ -68,7 +100,7 @@ function SentToCadItem({ job, onSelect }: { job: StatusJob; onSelect: (dbId: num
                     <span style={{ fontSize: '10px', color: 'var(--ink-soft)' }}>Sent {job.cad_send_date}</span>
                 )}
             </div>
-            {job.cad_note && <div className="status-note">📎 {job.cad_note}</div>}
+            <TaskNotes rawNote={job.cad_note} />
         </div>
     );
 }
@@ -89,7 +121,7 @@ function AwaitingApprovalItem({ job, onSelect }: { job: StatusJob; onSelect: (db
                     <span style={{ fontSize: '10px', color: 'var(--ink-soft)' }}>Received {job.cad_received_date}</span>
                 )}
             </div>
-            {job.cad_note && <div className="status-note">📎 {job.cad_note}</div>}
+            <TaskNotes rawNote={job.cad_note} />
         </div>
     );
 }
@@ -114,7 +146,7 @@ function ProdItem({ job, onSelect }: { job: StatusJob; onSelect: (dbId: number) 
                     {job.production_date && <span style={{ marginLeft: '6px' }}>{job.production_date}</span>}
                 </div>
             </div>
-            {job.production_note && <div className="status-note">📎 {job.production_note}</div>}
+            <TaskNotes rawNote={job.production_note} />
         </div>
     );
 }
@@ -139,7 +171,7 @@ function AwaitingCollectionItem({ job, onSelect }: { job: StatusJob; onSelect: (
                     : <span style={{ fontSize: '10px', color: 'var(--green)' }}>✓ Paid</span>
                 }
             </div>
-            {job.awaiting_collection_note && <div className="status-note">📎 {job.awaiting_collection_note}</div>}
+            <TaskNotes rawNote={job.awaiting_collection_note} />
         </div>
     );
 }

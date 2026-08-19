@@ -709,7 +709,9 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated, inline = fal
         (tasks as any[]).forEach((task) => {
             const status = task.is_done ? `✓ Done${task.task_date ? ' — ' + task.task_date : ''}` : '○ Pending';
             report += `  ${task.label}: ${status}\n`;
-            if (task.note) report += `    Note: ${task.note}\n`;
+            parseTaskNotes(task.note).forEach((entry) => {
+                report += `    Note: ${entry.content}${entry.date ? ' — ' + entry.date : ''}\n`;
+            });
         });
         report += `\n`;
 
