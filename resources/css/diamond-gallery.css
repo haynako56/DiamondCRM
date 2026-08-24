@@ -526,6 +526,28 @@ textarea:focus {
   border-radius: 10px;
 }
 
+.status-board-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-print-btn {
+  font-size: 11px;
+  color: var(--ink-mid);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.status-print-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold-dark);
+}
+
 .status-item {
   padding: 10px 14px;
   border-bottom: 1px solid var(--surface-2);
@@ -702,5 +724,45 @@ table.report-table {
 
   .content-scroll {
     padding: 12px 14px;
+  }
+}
+
+/* ── Print: only the board being printed ─────────── */
+@media print {
+  html, body {
+    height: auto;
+    overflow: visible;
+    background: var(--white);
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .status-board.printing,
+  .status-board.printing * {
+    visibility: visible;
+  }
+
+  .status-board.printing {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    overflow: visible;
+    border: none;
+    border-radius: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .status-board.printing .status-print-btn {
+    display: none;
+  }
+
+  .status-board.printing .status-item {
+    cursor: default;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }

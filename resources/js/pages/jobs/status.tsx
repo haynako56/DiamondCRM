@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import JobPanel from '@/components/jobs/job-panel';
 
 interface StatusJob {
@@ -193,8 +193,34 @@ function AllOpenItem({ job, onSelect }: { job: StatusJob; onSelect: (dbId: numbe
     );
 }
 
+function PrintBoardButton({ onPrint }: { onPrint: () => void }) {
+    return (
+        <button className="status-print-btn" onClick={onPrint} title="Print this board">
+            🖨 Print
+        </button>
+    );
+}
+
 export default function Status({ sent_to_cad, awaiting_approval, daniele_production, awaiting_collection, all_open, jobs }: Props) {
-    const [selectedJob, setSelectedJob] = useState<any | null>(null);
+    const [selectedJob, setSelectedJob]     = useState<any | null>(null);
+    const [printingBoard, setPrintingBoard] = useState<string | null>(null);
+
+    // Only the board marked as printing stays visible (see the @media print rules)
+    useEffect(() => {
+        if (!printingBoard) {
+            return;
+        }
+
+        const clearPrintingBoard = () => setPrintingBoard(null);
+
+        window.addEventListener('afterprint', clearPrintingBoard);
+        window.print();
+
+        return () => window.removeEventListener('afterprint', clearPrintingBoard);
+    }, [printingBoard]);
+
+    const boardClass = (boardName: string) =>
+        `status-board${printingBoard === boardName ? ' printing' : ''}`;
 
     const openPanel = (dbId: number) => {
         const fullJob = jobs.find((job) => job.id === dbId);
@@ -214,7 +240,7 @@ export default function Status({ sent_to_cad, awaiting_approval, daniele_product
                     {/* Row 1: CAD boards */}
                     <div className="status-boards">
 
-                        <div className="status-board">
+                        <div className={boardClass('sent_to_cad')}>
                             <div className="status-board-head">
                                 <div>
                                     <div className="status-board-title">Sent to CAD</div>
@@ -222,9 +248,12 @@ export default function Status({ sent_to_cad, awaiting_approval, daniele_product
                                         CAD sent, awaiting design back
                                     </div>
                                 </div>
-                                <span className={`status-count status-badge ${sent_to_cad.length ? 'sb-cad' : 'sb-approved'}`}>
-                                    {sent_to_cad.length}
-                                </span>
+                                <div className="status-board-actions">
+                                    <span className={`status-count status-badge ${sent_to_cad.length ? 'sb-cad' : 'sb-approved'}`}>
+                                        {sent_to_cad.length}
+                                    </span>
+                                    <PrintBoardButton onPrint={() => setPrintingBoard('sent_to_cad')} />
+                                </div>
                             </div>
                             {sent_to_cad.length > 0
                                 ? sent_to_cad.map((job) => <SentToCadItem key={job.id} job={job} onSelect={openPanel} />)
@@ -232,7 +261,7 @@ export default function Status({ sent_to_cad, awaiting_approval, daniele_product
                             }
                         </div>
 
-                        <div className="status-board">
+                        <div className={boardClass('awaiting_approval')}>
                             <div className="status-board-head">
                                 <div>
                                     <div className="status-board-title">Awaiting Client Approval</div>
@@ -240,9 +269,12 @@ export default function Status({ sent_to_cad, awaiting_approval, daniele_product
                                         CAD received, sent to client for sign-off
                                     </div>
                                 </div>
-                                <span className={`status-count status-badge ${awaiting_approval.length ? 'sb-cad' : 'sb-approved'}`}>
-                                    {awaiting_approval.length}
-                                </span>
+                                <div className="status-board-actions">
+                                    <span className={`status-count status-badge ${awaiting_approval.length ? 'sb-cad' : 'sb-approved'}`}>
+                                        {awaiting_approval.length}
+                                    </span>
+                                    <PrintBoardButton onPrint={() => setPrintingBoard('awaiting_approval')} />
+                                </div>
                             </div>
                             {awaiting_approval.length > 0
                                 ? awaiting_approval.map((job) => <AwaitingApprovalItem key={job.id} job={job} onSelect={openPanel} />)
@@ -255,7 +287,7 @@ export default function Status({ sent_to_cad, awaiting_approval, daniele_product
                     {/* Row 2: Production boards */}
                     <div className="status-boards">
 
-                        <div className="status-board">
+                        <div className={boardClass('daniele_production')}>
                             <div className="status-board-head">
                                 <div>
                                     <div className="status-board-title">Daniele — Production</div>
@@ -263,9 +295,12 @@ export default function Status({ sent_to_cad, awaiting_approval, daniele_product
                                         In casting or actively in production
                                     </div>
                                 </div>
-                                <span className={`status-count status-badge ${daniele_production.length ? 'sb-prod' : 'sb-approved'}`}>
-                                    {daniele_production.length}
-                                </span>
+                                <div className="status-board-actions">
+                                    <span className={`status-count status-badge ${daniele_production.length ? 'sb-prod' : 'sb-approved'}`}>
+                                        {daniele_production.length}
+                                    </span>
+                                    <PrintBoardButton onPrint={() => setPrintingBoard('daniele_production')} />
+                                </div>
                             </div>
                             {daniele_production.length > 0
                                 ? daniele_production.map((job) => <ProdItem key={job.id} job={job} onSelect={openPanel} />)
@@ -273,7 +308,7 @@ export default function Status({ sent_to_cad, awaiting_approval, daniele_product
                             }
                         </div>
 
-                        <div className="status-board">
+                        <div className={boardClass('awaiting_collection')}>
                             <div className="status-board-head">
                                 <div>
                                     <div className="status-board-title">Awaiting Collection</div>
@@ -281,12 +316,15 @@ export default function Status({ sent_to_cad, awaiting_approval, daniele_product
                                         Complete — client hasn't picked up yet
                                     </div>
                                 </div>
-                                <span
-                                    className="status-count status-badge"
-                                    style={awaiting_collection.length ? { background: '#FFF0DC', color: '#E67E22' } : undefined}
-                                >
-                                    {awaiting_collection.length}
-                                </span>
+                                <div className="status-board-actions">
+                                    <span
+                                        className="status-count status-badge"
+                                        style={awaiting_collection.length ? { background: '#FFF0DC', color: '#E67E22' } : undefined}
+                                    >
+                                        {awaiting_collection.length}
+                                    </span>
+                                    <PrintBoardButton onPrint={() => setPrintingBoard('awaiting_collection')} />
+                                </div>
                             </div>
                             {awaiting_collection.length > 0
                                 ? awaiting_collection.map((job) => <AwaitingCollectionItem key={job.id} job={job} onSelect={openPanel} />)
@@ -297,7 +335,7 @@ export default function Status({ sent_to_cad, awaiting_approval, daniele_product
                     </div>
 
                     {/* All open orders */}
-                    <div className="status-board" style={{ marginBottom: '14px' }}>
+                    <div className={boardClass('all_open')} style={{ marginBottom: '14px' }}>
                         <div className="status-board-head">
                             <div>
                                 <div className="status-board-title">All open orders</div>
@@ -305,7 +343,10 @@ export default function Status({ sent_to_cad, awaiting_approval, daniele_product
                                     Every active order with current stage
                                 </div>
                             </div>
-                            <span className="status-count status-badge sb-cad">{all_open.length}</span>
+                            <div className="status-board-actions">
+                                <span className="status-count status-badge sb-cad">{all_open.length}</span>
+                                <PrintBoardButton onPrint={() => setPrintingBoard('all_open')} />
+                            </div>
                         </div>
                         {all_open.length === 0
                             ? <div className="status-empty">No open orders</div>
