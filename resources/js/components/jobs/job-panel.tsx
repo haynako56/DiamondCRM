@@ -171,7 +171,7 @@ function EditOrderModal({ job, savedDetails, onSave, onClose }) {
                         />
                     </div>
                     <div>
-                        <label className="text-xs text-ink-soft uppercase tracking-widest block mb-1">Address</label>
+                        <label className="text-xs text-ink-soft uppercase tracking-widest block mb-1">Billing address</label>
                         <input type="text" value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} className="w-full text-sm border border-border rounded px-3 py-2" />
                     </div>
                     <div>
@@ -874,7 +874,8 @@ ${job.customer_note ? `
                         <div className="space-y-2 text-xs">
                             <div className="flex justify-between info-row"><span className="text-ink-soft">Email</span><span className="font-medium">{savedDetails.email}</span></div>
                             <div className="flex justify-between info-row"><span className="text-ink-soft">Phone</span><span className="font-medium">{savedDetails.phone}</span></div>
-                            <div className="flex justify-between info-row"><span className="text-ink-soft">Address</span><span className="font-medium text-right max-w-[60%]">{savedDetails.address}</span></div>
+                            <div className="flex justify-between info-row"><span className="text-ink-soft">Billing address</span><span className="font-medium text-right max-w-[60%]">{savedDetails.address || '—'}</span></div>
+                            <div className="flex justify-between info-row"><span className="text-ink-soft">Shipping address</span><span className="font-medium text-right max-w-[60%]">{job.shipping_address || '—'}</span></div>
                             <div className="flex justify-between info-row">
                                 <span className="text-ink-soft">Order date</span>
                                 <span className="font-medium">{new Date(job.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
