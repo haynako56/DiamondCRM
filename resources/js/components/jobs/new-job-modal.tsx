@@ -13,14 +13,15 @@ const CATEGORIES = [
     { label: 'Jewellery Repair',                         value: 'Jewellery Repair' },
 ];
 
-export default function NewJobModal({ onClose }) {
+export default function NewJobModal({ onClose, users = [] }: { onClose: () => void; users?: { id: number; name: string }[] }) {
     const { data, setData, post, processing, errors } = useForm({
-        client_name:  '',
-        product:      '',
-        category:     CATEGORIES[0].value,
-        price:        '',
-        amount_paid:  '',
-        due_date:     '',
+        client_name:    '',
+        product:        '',
+        category:       CATEGORIES[0].value,
+        price:          '',
+        amount_paid:    '',
+        due_date:       '',
+        salesperson_id: '',
     });
 
     const handleSubmit = () => {
@@ -74,6 +75,21 @@ export default function NewJobModal({ onClose }) {
                             ))}
                         </select>
                         {errors.category && <p className="text-xs text-red-600 mt-1">{errors.category}</p>}
+                    </div>
+
+                    <div>
+                        <label className="text-xs text-ink-soft uppercase tracking-widest block mb-1">Salesperson</label>
+                        <select
+                            value={data.salesperson_id}
+                            onChange={(e) => setData('salesperson_id', e.target.value)}
+                            className="w-full px-3 py-2 border border-border rounded text-sm bg-white"
+                        >
+                            <option value="">— No salesperson —</option>
+                            {users.map((user) => (
+                                <option key={user.id} value={user.id}>{user.name}</option>
+                            ))}
+                        </select>
+                        {errors.salesperson_id && <p className="text-xs text-red-600 mt-1">{errors.salesperson_id}</p>}
                     </div>
 
                     <div>

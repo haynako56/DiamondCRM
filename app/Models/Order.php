@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Support\OrderTaskDefinitions;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
@@ -32,6 +33,8 @@ class Order extends Model
         'payment_note',
         'customer_note',
         'meta_data',
+        'is_priority',
+        'salesperson_id',
     ];
 
     protected $casts = [
@@ -44,6 +47,7 @@ class Order extends Model
         'amount_paid'            => 'float',
         'meta_data'              => 'array',
         'is_archived'            => 'boolean',
+        'is_priority'            => 'boolean',
     ];
 
     protected $appends = ['amount_owing'];
@@ -65,6 +69,11 @@ class Order extends Model
     public function orderNotes(): HasMany
     {
         return $this->hasMany(OrderNote::class)->latest();
+    }
+
+    public function salesperson(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'salesperson_id');
     }
 
     // -------------------------------------------------------------------------
@@ -89,6 +98,23 @@ class Order extends Model
     public function customerPhone(): string
     {
         return $this->billing['phone'] ?? '';
+    }
+
+    /**
+     * A WooCommerce order is priority when its fee lines contain a
+     * "Delivery Option" fee flagged as Priority.
+     */
+    public static function hasPriorityDelivery(array $feeLines): bool
+    {
+        foreach ($feeLines as $feeLine) {
+            $feeName = strtolower($feeLine['name'] ?? '');
+
+            if (str_contains($feeName, 'delivery option') && str_contains($feeName, 'priority')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function billingAddress(): string

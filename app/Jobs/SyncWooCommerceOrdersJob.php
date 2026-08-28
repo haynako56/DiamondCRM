@@ -29,6 +29,7 @@ class SyncWooCommerceOrdersJob implements ShouldQueue
     private function saveOrUpdateOrder(array $wooCommerceOrder): void
     {
         $existingOrder = Order::where('woocommerce_order_id', $wooCommerceOrder['id'])->first();
+        $isPriority    = Order::hasPriorityDelivery($wooCommerceOrder['fee_lines'] ?? []);
 
         if ($existingOrder) {
             // Order already exists — just update the data, don't touch tasks
@@ -45,6 +46,7 @@ class SyncWooCommerceOrdersJob implements ShouldQueue
                 'customer_note'          => $wooCommerceOrder['customer_note'] ?? null,
                 'date_paid'              => $wooCommerceOrder['date_paid'],
                 'woocommerce_created_at' => $wooCommerceOrder['date_created'],
+                'is_priority'            => $isPriority,
             ]);
 
             $this->saveOrUpdateLineItems($existingOrder, $wooCommerceOrder['line_items']);
@@ -67,6 +69,7 @@ class SyncWooCommerceOrdersJob implements ShouldQueue
             'customer_note'          => $wooCommerceOrder['customer_note'] ?? null,
             'date_paid'              => $wooCommerceOrder['date_paid'],
             'woocommerce_created_at' => $wooCommerceOrder['date_created'],
+            'is_priority'            => $isPriority,
         ]);
 
         $this->saveOrUpdateLineItems($newOrder, $wooCommerceOrder['line_items']);

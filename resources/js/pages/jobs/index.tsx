@@ -3,7 +3,7 @@ import { useState } from 'react';
 import JobsList from '@/components/jobs/jobs-list';
 import NewJobModal from '@/components/jobs/new-job-modal';
 
-export default function JobsIndex({ jobs, stats }) {
+export default function JobsIndex({ jobs, stats, users }) {
     const [selectedJob, setSelectedJob]     = useState(null);
     const [currentFilter, setCurrentFilter] = useState('all');
     const [expandedCards, setExpandedCards] = useState(new Set());
@@ -75,7 +75,7 @@ export default function JobsIndex({ jobs, stats }) {
                 </div>
             </div>
 
-            {isModalOpen && <NewJobModal onClose={() => setIsModalOpen(false)} />}
+            {isModalOpen && <NewJobModal onClose={() => setIsModalOpen(false)} users={users} />}
         </>
     );
 }

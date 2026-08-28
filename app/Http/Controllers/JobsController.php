@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderNote;
+use App\Models\User;
 use App\Support\OrderTaskDefinitions;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -17,7 +18,7 @@ class JobsController extends Controller
 {
     public function index(): Response
     {
-        $orders = Order::with('lineItems', 'tasks', 'orderNotes')
+        $orders = Order::with('lineItems', 'tasks', 'orderNotes', 'salesperson')
             ->where('status', '!=', 'checkout-draft')
             ->latest('woocommerce_created_at')
             ->get();
@@ -34,6 +35,7 @@ class JobsController extends Controller
         return Inertia::render('jobs/index', [
             'jobs'  => $jobs,
             'stats' => $stats,
+            'users' => User::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -55,6 +57,7 @@ class JobsController extends Controller
             'price'       => 'required|numeric|min:0',
             'amount_paid' => 'nullable|numeric|min:0',
             'due_date'    => 'nullable|date',
+            'salesperson_id' => 'nullable|exists:users,id',
         ]);
 
         $nameParts             = explode(' ', $request->client_name, 2);
@@ -94,6 +97,7 @@ class JobsController extends Controller
             'order_due_date'         => $request->due_date ?? now()->addWeeks(4),
             'is_manual'              => true,
             'dg_order_code'          => 'DG-' . str_pad(Order::max('id') + 1, 5, '0', STR_PAD_LEFT),
+            'salesperson_id'         => $request->salesperson_id,
         ]);
 
         $order->createDefaultTasks($productionMethod);
@@ -190,7 +194,7 @@ class JobsController extends Controller
 
     public function status(): Response
     {
-        $orders = Order::with('lineItems', 'tasks', 'orderNotes')
+        $orders = Order::with('lineItems', 'tasks', 'orderNotes', 'salesperson')
             ->where('status', '!=', 'checkout-draft')
             ->where('status', '!=', 'completed')
             ->get();
@@ -334,7 +338,7 @@ class JobsController extends Controller
 
     public function reports(): Response
     {
-        $orders = Order::with('lineItems', 'tasks', 'orderNotes')
+        $orders = Order::with('lineItems', 'tasks', 'orderNotes', 'salesperson')
             ->where('status', '!=', 'checkout-draft')
             ->where('status', '!=', 'completed')
             ->orderBy('order_due_date', 'asc')
@@ -447,7 +451,7 @@ class JobsController extends Controller
 
     public function completed(): Response
     {
-        $orders = Order::with('lineItems', 'tasks', 'orderNotes')
+        $orders = Order::with('lineItems', 'tasks', 'orderNotes', 'salesperson')
             ->where('status', 'completed')
             ->where('is_archived', false)
             ->latest('woocommerce_created_at')
@@ -570,6 +574,7 @@ class JobsController extends Controller
     {
         $existingOrder = Order::where('woocommerce_order_id', $wooCommerceOrder['id'])->first();
         $payment       = $this->resolvePaymentFromMeta($wooCommerceOrder);
+        $isPriority    = Order::hasPriorityDelivery($wooCommerceOrder['fee_lines'] ?? []);
 
         if ($existingOrder) {
             // Order already exists — update data only, never touch tasks
@@ -586,6 +591,7 @@ class JobsController extends Controller
                 'date_paid'              => $wooCommerceOrder['date_paid'],
                 'woocommerce_created_at' => $wooCommerceOrder['date_created'],
                 'meta_data'              => $wooCommerceOrder['meta_data'] ?? null,
+                'is_priority'            => $isPriority,
             ]);
 
             $this->saveOrUpdateLineItems($existingOrder, $wooCommerceOrder['line_items']);
@@ -612,6 +618,7 @@ class JobsController extends Controller
             'order_due_date'         => \Carbon\Carbon::parse($wooCommerceOrder['date_created'])->addWeeks(4),
             'production_category'    => 'cad_casting',
             'meta_data'              => $wooCommerceOrder['meta_data'] ?? null,
+            'is_priority'            => $isPriority,
         ]);
 
         $this->saveOrUpdateLineItems($newOrder, $wooCommerceOrder['line_items']);
@@ -722,6 +729,8 @@ class JobsController extends Controller
             'created_at'           => $order->woocommerce_created_at->toDateString(),
             'due_date'             => $order->order_due_date?->toDateString() ?? '',
             'production_category'  => $order->production_category ?? 'cad_casting',
+            'is_priority'          => (bool) $order->is_priority,
+            'salesperson'          => $order->salesperson?->name ?? '',
             'woocommerce_order_id' => $order->woocommerce_order_id,
         ];
     }
