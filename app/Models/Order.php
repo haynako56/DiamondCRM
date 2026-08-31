@@ -23,6 +23,7 @@ class Order extends Model
         'date_paid',
         'woocommerce_created_at',
         'address',
+        'shipping_address',
         'product_name',
         'production_category',
         'dg_order_code',
@@ -131,6 +132,23 @@ class Order extends Model
             $this->billing['state']     ?? '',
             $this->billing['postcode']  ?? '',
             $this->billing['country']   ?? '',
+        ]));
+    }
+
+    public function shippingAddress(): string
+    {
+        // Use the edited shipping address if set, otherwise build from shipping JSON
+        if ($this->shipping_address) {
+            return $this->shipping_address;
+        }
+
+        return implode(', ', array_filter([
+            $this->shipping['address_1'] ?? '',
+            $this->shipping['address_2'] ?? '',
+            $this->shipping['city']      ?? '',
+            $this->shipping['state']     ?? '',
+            $this->shipping['postcode']  ?? '',
+            $this->shipping['country']   ?? '',
         ]));
     }
 

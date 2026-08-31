@@ -27,9 +27,11 @@ interface StatusJob {
     awaiting_collection_date: string;
     awaiting_collection_note: string;
     collection_method:        string;
+    order_date:               string;
 }
 
 interface Props {
+    new_jobs:            StatusJob[];
     sent_to_cad:         StatusJob[];
     awaiting_approval:   StatusJob[];
     daniele_production:  StatusJob[];
@@ -84,6 +86,26 @@ function dueInfo(dueRaw: string | null): { cls: string; text: string } {
     return { cls: 'due-ok', text: dueDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) };
 }
 
+function NewJobItem({ job, onSelect }: { job: StatusJob; onSelect: (dbId: number) => void }) {
+    const due = dueInfo(job.due_raw);
+    return (
+        <div className="status-item" onClick={() => onSelect(job.db_id)}>
+            <div className="status-item-top">
+                <span className="status-woo">{job.woo_id}</span>
+                <span className="status-name">{job.product}</span>
+                <span className={`due-label ${due.cls}`}>⏱ {due.text}</span>
+            </div>
+            <div className="status-client">{job.client}</div>
+            <div className="status-meta">
+                <span className="status-badge sb-new">{job.stage}</span>
+                {job.order_date && (
+                    <span style={{ fontSize: '10px', color: 'var(--ink-soft)' }}>Ordered {job.order_date}</span>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function SentToCadItem({ job, onSelect }: { job: StatusJob; onSelect: (dbId: number) => void }) {
     const due = dueInfo(job.due_raw);
     return (
@@ -95,7 +117,7 @@ function SentToCadItem({ job, onSelect }: { job: StatusJob; onSelect: (dbId: num
             </div>
             <div className="status-client">{job.client}</div>
             <div className="status-meta">
-                <span className="status-badge sb-cad">CAD sent — awaiting return</span>
+                <span className="status-badge sb-cad">{job.cad_sent ? 'CAD sent — awaiting return' : 'Ready for CAD'}</span>
                 {job.cad_send_date && (
                     <span style={{ fontSize: '10px', color: 'var(--ink-soft)' }}>Sent {job.cad_send_date}</span>
                 )}
@@ -201,7 +223,7 @@ function PrintBoardButton({ onPrint }: { onPrint: () => void }) {
     );
 }
 
-export default function Status({ sent_to_cad, awaiting_approval, daniele_production, awaiting_collection, all_open, jobs }: Props) {
+export default function Status({ new_jobs, sent_to_cad, awaiting_approval, daniele_production, awaiting_collection, all_open, jobs }: Props) {
     const [selectedJob, setSelectedJob]     = useState<any | null>(null);
     const [printingBoard, setPrintingBoard] = useState<string | null>(null);
 
@@ -237,6 +259,28 @@ export default function Status({ sent_to_cad, awaiting_approval, daniele_product
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                 <div className="content-scroll" style={{ flex: 1, minWidth: 0 }}>
 
+                    {/* New jobs waiting to be started */}
+                    <div className={boardClass('new_jobs')} style={{ marginBottom: '18px' }}>
+                        <div className="status-board-head">
+                            <div>
+                                <div className="status-board-title">New Jobs</div>
+                                <div style={{ fontSize: '11px', color: 'var(--ink-soft)', marginTop: '1px' }}>
+                                    Order placed — not yet at the CAD step
+                                </div>
+                            </div>
+                            <div className="status-board-actions">
+                                <span className={`status-count status-badge ${new_jobs.length ? 'sb-new' : 'sb-approved'}`}>
+                                    {new_jobs.length}
+                                </span>
+                                <PrintBoardButton onPrint={() => setPrintingBoard('new_jobs')} />
+                            </div>
+                        </div>
+                        {new_jobs.length > 0
+                            ? new_jobs.map((job) => <NewJobItem key={job.id} job={job} onSelect={openPanel} />)
+                            : <div className="status-empty">✓ No new jobs waiting to start</div>
+                        }
+                    </div>
+
                     {/* Row 1: CAD boards */}
                     <div className="status-boards">
 
@@ -245,7 +289,7 @@ export default function Status({ sent_to_cad, awaiting_approval, daniele_product
                                 <div>
                                     <div className="status-board-title">Sent to CAD</div>
                                     <div style={{ fontSize: '11px', color: 'var(--ink-soft)', marginTop: '1px' }}>
-                                        CAD sent, awaiting design back
+                                        At the CAD step or diamonds delivered
                                     </div>
                                 </div>
                                 <div className="status-board-actions">

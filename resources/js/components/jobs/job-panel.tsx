@@ -133,6 +133,7 @@ function EditOrderModal({ job, savedDetails, onSave, onClose }) {
         email:                 savedDetails.email,
         phone:                 savedDetails.phone,
         address:               savedDetails.address,
+        shipping_address:      savedDetails.shipping_address,
         woocommerce_order_id:  savedDetails.woocommerce_order_id ?? '',
     });
 
@@ -173,6 +174,10 @@ function EditOrderModal({ job, savedDetails, onSave, onClose }) {
                     <div>
                         <label className="text-xs text-ink-soft uppercase tracking-widest block mb-1">Billing address</label>
                         <input type="text" value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} className="w-full text-sm border border-border rounded px-3 py-2" />
+                    </div>
+                    <div>
+                        <label className="text-xs text-ink-soft uppercase tracking-widest block mb-1">Shipping address</label>
+                        <input type="text" value={draft.shipping_address} onChange={(e) => setDraft({ ...draft, shipping_address: e.target.value })} className="w-full text-sm border border-border rounded px-3 py-2" />
                     </div>
                     <div>
                         <label className="text-xs text-ink-soft uppercase tracking-widest block mb-1">WooCommerce Order ID</label>
@@ -635,6 +640,7 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated, inline = fal
         email:                job.email,
         phone:                job.phone,
         address:              job.address,
+        shipping_address:     job.shipping_address ?? '',
         woocommerce_order_id: job.woocommerce_order_id ?? '',
     });
 
@@ -799,8 +805,8 @@ export default function JobPanel({ job, onClose, onJobNotesUpdated, inline = fal
   <tr><td class="sl">Name</td><td>${savedDetails.client}</td></tr>
   <tr><td class="sl">Email</td><td>${savedDetails.email}</td></tr>
   ${job.phone ? `<tr><td class="sl">Phone</td><td>${job.phone}</td></tr>` : ''}
-  ${job.address ? `<tr><td class="sl">Billing address</td><td>${job.address}</td></tr>` : ''}
-  ${job.shipping_address ? `<tr><td class="sl">Shipping address</td><td>${job.shipping_address}</td></tr>` : ''}
+  ${savedDetails.address ? `<tr><td class="sl">Billing address</td><td>${savedDetails.address}</td></tr>` : ''}
+  ${savedDetails.shipping_address ? `<tr><td class="sl">Shipping address</td><td>${savedDetails.shipping_address}</td></tr>` : ''}
 </table>
 
 <div class="section-head">Product</div>
@@ -875,7 +881,7 @@ ${job.customer_note ? `
                             <div className="flex justify-between info-row"><span className="text-ink-soft">Email</span><span className="font-medium">{savedDetails.email}</span></div>
                             <div className="flex justify-between info-row"><span className="text-ink-soft">Phone</span><span className="font-medium">{savedDetails.phone}</span></div>
                             <div className="flex justify-between info-row"><span className="text-ink-soft">Billing address</span><span className="font-medium text-right max-w-[60%]">{savedDetails.address || '—'}</span></div>
-                            <div className="flex justify-between info-row"><span className="text-ink-soft">Shipping address</span><span className="font-medium text-right max-w-[60%]">{job.shipping_address || '—'}</span></div>
+                            <div className="flex justify-between info-row"><span className="text-ink-soft">Shipping address</span><span className="font-medium text-right max-w-[60%]">{savedDetails.shipping_address || '—'}</span></div>
                             <div className="flex justify-between info-row">
                                 <span className="text-ink-soft">Order date</span>
                                 <span className="font-medium">{new Date(job.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>

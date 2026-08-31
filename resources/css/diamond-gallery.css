@@ -632,6 +632,7 @@ textarea:focus {
 .sb-prod     { background: var(--green-bg); color: var(--green); }
 .sb-waiting  { background: var(--amber-bg); color: var(--amber); }
 .sb-approved { background: var(--green-bg); color: var(--green); }
+.sb-new      { background: var(--purple-bg); color: var(--purple); }
 
 .status-empty {
   padding: 24px;

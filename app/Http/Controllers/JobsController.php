@@ -114,7 +114,8 @@ class JobsController extends Controller
             'product'      => 'sometimes|nullable|string|max:255',
             'email'        => 'sometimes|nullable|email|max:255',
             'phone'        => ['sometimes', 'nullable', 'string', 'max:20', 'regex:/^[0-9\+\s\-\(\)]+$/'],
-            'address'      => 'sometimes|nullable|string|max:500',
+            'address'          => 'sometimes|nullable|string|max:500',
+            'shipping_address' => 'sometimes|nullable|string|max:500',
             'price'        => 'sometimes|nullable|numeric|min:0',
             'amount_paid'  => 'sometimes|nullable|numeric|min:0',
             'payment_plan' => 'sometimes|nullable|string|max:255',
@@ -183,6 +184,7 @@ class JobsController extends Controller
         $order->update([
             'billing'              => $billing,
             'address'              => $request->address,
+            'shipping_address'     => $request->shipping_address,
             'product_name'         => $request->product,
             'woocommerce_order_id' => $request->woocommerce_order_id ?? $order->woocommerce_order_id,
         ]);
@@ -199,6 +201,7 @@ class JobsController extends Controller
             ->where('status', '!=', 'completed')
             ->get();
 
+        $newJobs           = [];
         $sentToCad         = [];
         $awaitingApproval  = [];
         $danieleProduction = [];
@@ -212,6 +215,7 @@ class JobsController extends Controller
             $productionTask    = $sortedTasks->where('key', 'production')->first();
             $cadSendTask       = $sortedTasks->where('key', 'cad_send')->first();
             $cadReceivedTask   = $sortedTasks->where('key', 'cad_received')->first();
+            $diamondsDeliveredTask = $sortedTasks->where('key', 'diamonds_delivered')->first();
             $cadApproveTask    = $sortedTasks->where('key', 'cad_approve')->first();
             $castingTask       = $sortedTasks->where('key', 'casting')->first();
             $jobPackedTask     = $sortedTasks->where('key', 'job_packed')->first();
@@ -221,6 +225,11 @@ class JobsController extends Controller
 
             $cadReceived   = (bool) ($cadReceivedTask?->is_done ?? false);
             $finalTaskDone = (bool) ($collectionDispatchTask?->is_done ?? false);
+            $hasStarted    = $sortedTasks->where('is_done', true)->isNotEmpty();
+
+            // At the CAD stage: the current step is a CAD step, or the diamonds are in
+            $atCadStep         = in_array($pendingTask?->key, ['cad_send', 'cad_received']);
+            $diamondsDelivered = (bool) ($diamondsDeliveredTask?->is_done ?? false);
 
             $job = [
                 'db_id'                     => $order->id,
@@ -249,15 +258,27 @@ class JobsController extends Controller
                 'awaiting_collection_date'  => $awaitingCollTask?->task_date?->format('d M Y') ?? '',
                 'awaiting_collection_note'  => $awaitingCollTask?->note ?? '',
                 'collection_method'         => $collectionDispatchTask?->progress ?? '',
+                'order_date'                => $order->woocommerce_created_at?->format('d M Y') ?? '',
             ];
 
-            // CAD boards: cad_casting orders where approval is not yet done
-            if ($category === 'cad_casting' && !($cadApproveTask?->is_done)) {
-                if ($cadReceived) {
-                    $awaitingApproval[] = $job;
-                } else {
-                    $sentToCad[] = $job;
-                }
+            // New Jobs: a CAD job stays here until it reaches the CAD step,
+            // other categories drop off as soon as their first step is ticked
+            $isNewJob = $category === 'cad_casting'
+                ? in_array($pendingTask?->key, ['diamonds_order', 'diamonds_delivered'])
+                : !$hasStarted;
+
+            if ($isNewJob) {
+                $newJobs[] = $job;
+            }
+
+            // Sent to CAD: at the CAD step or diamonds delivered, and the design is not back yet
+            if ($category === 'cad_casting' && !$cadReceived && ($atCadStep || $diamondsDelivered)) {
+                $sentToCad[] = $job;
+            }
+
+            // Awaiting Client Approval: CAD is back but the client has not signed off
+            if ($category === 'cad_casting' && $cadReceived && !($cadApproveTask?->is_done)) {
+                $awaitingApproval[] = $job;
             }
 
             // Daniele Production: show while production is NOT yet done
@@ -288,6 +309,7 @@ class JobsController extends Controller
         }
 
         $sortByDue = fn ($jobA, $jobB) => strcmp($jobA['due_raw'] ?? '9999', $jobB['due_raw'] ?? '9999');
+        usort($newJobs,            $sortByDue);
         usort($sentToCad,          $sortByDue);
         usort($awaitingApproval,   $sortByDue);
         usort($danieleProduction,  $sortByDue);
@@ -297,6 +319,7 @@ class JobsController extends Controller
         $jobs = $orders->map(fn (Order $order) => $this->buildJobShape($order))->values();
 
         return Inertia::render('jobs/status', [
+            'new_jobs'            => $newJobs,
             'sent_to_cad'         => $sentToCad,
             'awaiting_approval'   => $awaitingApproval,
             'daniele_production'  => $danieleProduction,
@@ -698,7 +721,7 @@ class JobsController extends Controller
             'email'                => $order->customerEmail(),
             'phone'                => $order->customerPhone(),
             'address'              => $order->address ?? $order->billingAddress(),
-            'shipping_address'     => $this->buildShippingAddress($order->shipping ?? []),
+            'shipping_address'     => $order->shippingAddress(),
             'product'              => $productName,
             'line_items'           => $order->lineItems->map(fn ($lineItem) => [
                 'id'           => $lineItem->id,
@@ -739,20 +762,6 @@ class JobsController extends Controller
     {
         $entry = collect($metaData)->firstWhere('key', '_dg_is_custom_order');
         return $entry !== null && ($entry['value'] ?? '') === 'yes';
-    }
-
-    private function buildShippingAddress(array $shipping): string
-    {
-        $lines = array_filter([
-            $shipping['address_1'] ?? '',
-            $shipping['address_2'] ?? '',
-            $shipping['city']      ?? '',
-            $shipping['state']     ?? '',
-            $shipping['postcode']  ?? '',
-            $shipping['country']   ?? '',
-        ]);
-
-        return implode(', ', $lines);
     }
 
     private function buildStoneData($lineItem): ?array
