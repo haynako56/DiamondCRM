@@ -45,6 +45,7 @@ class SyncWooCommerceOrdersCommand extends Command
         $existingOrder = Order::where('woocommerce_order_id', $wooCommerceOrder['id'])->first();
         $payment       = $this->resolvePaymentFromMeta($wooCommerceOrder);
         $isPriority    = Order::hasPriorityDelivery($wooCommerceOrder['fee_lines'] ?? []);
+        $isExpress     = Order::hasExpressDelivery($wooCommerceOrder['fee_lines'] ?? []);
 
         if ($existingOrder) {
             // Order already exists — update data only, never touch tasks
@@ -61,6 +62,7 @@ class SyncWooCommerceOrdersCommand extends Command
                 'woocommerce_created_at' => $wooCommerceOrder['date_created'],
                 'meta_data'              => $wooCommerceOrder['meta_data'] ?? null,
                 'is_priority'            => $isPriority,
+                'is_express'             => $isExpress,
             ]);
 
             $this->saveOrUpdateLineItems($existingOrder, $wooCommerceOrder['line_items']);
@@ -82,11 +84,13 @@ class SyncWooCommerceOrdersCommand extends Command
             'shipping'               => $wooCommerceOrder['shipping'],
             'date_paid'              => $wooCommerceOrder['date_paid'],
             'woocommerce_created_at' => $wooCommerceOrder['date_created'],
-            'order_due_date'         => \Carbon\Carbon::parse($wooCommerceOrder['date_created'])->addWeeks(4),
+            'order_due_date'         => \Carbon\Carbon::parse($wooCommerceOrder['date_created'])
+                ->addWeeks(Order::deliveryTurnaroundWeeks($isPriority, $isExpress)),
             'dg_order_code'          => 'DG-' . str_pad(Order::max('id') + 1, 5, '0', STR_PAD_LEFT),
             'production_category'    => 'cad_casting',
             'meta_data'              => $wooCommerceOrder['meta_data'] ?? null,
             'is_priority'            => $isPriority,
+            'is_express'             => $isExpress,
         ]);
 
         $this->saveOrUpdateLineItems($newOrder, $wooCommerceOrder['line_items']);

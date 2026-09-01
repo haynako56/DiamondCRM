@@ -262,6 +262,20 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--ink-soft);
 }
 
+/* Express delivery flag on a job card */
+.express-flag {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--white);
+  background: var(--purple);
+  border-radius: 4px;
+}
+
 /* Priority delivery flag on a job card */
 .priority-flag {
   display: inline-block;

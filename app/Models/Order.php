@@ -35,6 +35,7 @@ class Order extends Model
         'customer_note',
         'meta_data',
         'is_priority',
+        'is_express',
         'salesperson_id',
     ];
 
@@ -49,6 +50,7 @@ class Order extends Model
         'meta_data'              => 'array',
         'is_archived'            => 'boolean',
         'is_priority'            => 'boolean',
+        'is_express'             => 'boolean',
     ];
 
     protected $appends = ['amount_owing'];
@@ -107,15 +109,44 @@ class Order extends Model
      */
     public static function hasPriorityDelivery(array $feeLines): bool
     {
+        return static::hasDeliveryOption($feeLines, 'priority');
+    }
+
+    /**
+     * Same idea as priority, for a "Delivery Option" fee flagged as Express.
+     */
+    public static function hasExpressDelivery(array $feeLines): bool
+    {
+        return static::hasDeliveryOption($feeLines, 'express');
+    }
+
+    private static function hasDeliveryOption(array $feeLines, string $option): bool
+    {
         foreach ($feeLines as $feeLine) {
             $feeName = strtolower($feeLine['name'] ?? '');
 
-            if (str_contains($feeName, 'delivery option') && str_contains($feeName, 'priority')) {
+            if (str_contains($feeName, 'delivery option') && str_contains($feeName, $option)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * Turnaround promised by the delivery option chosen at checkout.
+     */
+    public static function deliveryTurnaroundWeeks(bool $isPriority, bool $isExpress): int
+    {
+        if ($isPriority) {
+            return 2;
+        }
+
+        if ($isExpress) {
+            return 3;
+        }
+
+        return 4;
     }
 
     public function billingAddress(): string

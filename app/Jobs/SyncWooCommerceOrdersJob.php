@@ -30,6 +30,7 @@ class SyncWooCommerceOrdersJob implements ShouldQueue
     {
         $existingOrder = Order::where('woocommerce_order_id', $wooCommerceOrder['id'])->first();
         $isPriority    = Order::hasPriorityDelivery($wooCommerceOrder['fee_lines'] ?? []);
+        $isExpress     = Order::hasExpressDelivery($wooCommerceOrder['fee_lines'] ?? []);
 
         if ($existingOrder) {
             // Order already exists — just update the data, don't touch tasks
@@ -47,6 +48,7 @@ class SyncWooCommerceOrdersJob implements ShouldQueue
                 'date_paid'              => $wooCommerceOrder['date_paid'],
                 'woocommerce_created_at' => $wooCommerceOrder['date_created'],
                 'is_priority'            => $isPriority,
+                'is_express'             => $isExpress,
             ]);
 
             $this->saveOrUpdateLineItems($existingOrder, $wooCommerceOrder['line_items']);
@@ -69,7 +71,10 @@ class SyncWooCommerceOrdersJob implements ShouldQueue
             'customer_note'          => $wooCommerceOrder['customer_note'] ?? null,
             'date_paid'              => $wooCommerceOrder['date_paid'],
             'woocommerce_created_at' => $wooCommerceOrder['date_created'],
+            'order_due_date'         => \Carbon\Carbon::parse($wooCommerceOrder['date_created'])
+                ->addWeeks(Order::deliveryTurnaroundWeeks($isPriority, $isExpress)),
             'is_priority'            => $isPriority,
+            'is_express'             => $isExpress,
         ]);
 
         $this->saveOrUpdateLineItems($newOrder, $wooCommerceOrder['line_items']);
