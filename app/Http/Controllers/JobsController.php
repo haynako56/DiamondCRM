@@ -25,10 +25,19 @@ class JobsController extends Controller
 
         $jobs = $orders->map(fn (Order $order) => $this->buildJobShape($order));
 
+        $today      = now()->startOfDay();
+        $openOrders = $orders->where('status', '!=', 'completed');
+
         $stats = [
-            'active'      => $orders->where('status', '!=', 'completed')->count(),
-            'overdue'     => 0,
-            'due_soon'    => 0,
+            'active'      => $openOrders->count(),
+            'overdue'     => $openOrders->filter(
+                fn (Order $order) => $order->order_due_date && $order->order_due_date->lt($today)
+            )->count(),
+            'due_soon'    => $openOrders->filter(
+                fn (Order $order) => $order->order_due_date
+                    && $order->order_due_date->gte($today)
+                    && $order->order_due_date->lt($today->copy()->addDays(7))
+            )->count(),
             'outstanding' => $orders->sum(fn (Order $order) => $order->amount_owing),
         ];
 

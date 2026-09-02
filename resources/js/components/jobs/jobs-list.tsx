@@ -110,14 +110,6 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                 </div>
             </div>
 
-            {/* Overdue alert */}
-            {stats.overdue > 0 && (
-                <div className="alert">
-                    <span>⚠</span>
-                    <span>{stats.overdue} job{stats.overdue > 1 ? 's are' : ' is'} past due date.</span>
-                </div>
-            )}
-
             {/* Filter bar + search */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
                 <div className="filter-bar" style={{ marginBottom: 0 }}>
