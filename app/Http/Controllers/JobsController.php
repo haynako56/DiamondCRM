@@ -224,7 +224,6 @@ class JobsController extends Controller
             $productionTask    = $sortedTasks->where('key', 'production')->first();
             $cadSendTask       = $sortedTasks->where('key', 'cad_send')->first();
             $cadReceivedTask   = $sortedTasks->where('key', 'cad_received')->first();
-            $diamondsDeliveredTask = $sortedTasks->where('key', 'diamonds_delivered')->first();
             $cadApproveTask    = $sortedTasks->where('key', 'cad_approve')->first();
             $castingTask       = $sortedTasks->where('key', 'casting')->first();
             $jobPackedTask     = $sortedTasks->where('key', 'job_packed')->first();
@@ -235,10 +234,6 @@ class JobsController extends Controller
             $cadReceived   = (bool) ($cadReceivedTask?->is_done ?? false);
             $finalTaskDone = (bool) ($collectionDispatchTask?->is_done ?? false);
             $hasStarted    = $sortedTasks->where('is_done', true)->isNotEmpty();
-
-            // At the CAD stage: the current step is a CAD step, or the diamonds are in
-            $atCadStep         = in_array($pendingTask?->key, ['cad_send', 'cad_received']);
-            $diamondsDelivered = (bool) ($diamondsDeliveredTask?->is_done ?? false);
 
             $job = [
                 'db_id'                     => $order->id,
@@ -270,18 +265,13 @@ class JobsController extends Controller
                 'order_date'                => $order->woocommerce_created_at?->format('d M Y') ?? '',
             ];
 
-            // New Jobs: a CAD job stays here until it reaches the CAD step,
-            // other categories drop off as soon as their first step is ticked
-            $isNewJob = $category === 'cad_casting'
-                ? in_array($pendingTask?->key, ['diamonds_order', 'diamonds_delivered'])
-                : !$hasStarted;
-
-            if ($isNewJob) {
+            // New Jobs: nothing ticked off yet — the first task is still open
+            if (!$hasStarted) {
                 $newJobs[] = $job;
             }
 
-            // Sent to CAD: at the CAD step or diamonds delivered, and the design is not back yet
-            if ($category === 'cad_casting' && !$cadReceived && ($atCadStep || $diamondsDelivered)) {
+            // Sent to CAD: the first task is done and the CAD design is not back yet
+            if ($category === 'cad_casting' && $hasStarted && !$cadReceived) {
                 $sentToCad[] = $job;
             }
 

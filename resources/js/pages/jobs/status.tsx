@@ -117,7 +117,7 @@ function SentToCadItem({ job, onSelect }: { job: StatusJob; onSelect: (dbId: num
             </div>
             <div className="status-client">{job.client}</div>
             <div className="status-meta">
-                <span className="status-badge sb-cad">{job.cad_sent ? 'CAD sent — awaiting return' : 'Ready for CAD'}</span>
+                <span className="status-badge sb-cad">{job.cad_sent ? 'CAD sent — awaiting return' : job.stage}</span>
                 {job.cad_send_date && (
                     <span style={{ fontSize: '10px', color: 'var(--ink-soft)' }}>Sent {job.cad_send_date}</span>
                 )}
@@ -265,7 +265,7 @@ export default function Status({ new_jobs, sent_to_cad, awaiting_approval, danie
                             <div>
                                 <div className="status-board-title">New Jobs</div>
                                 <div style={{ fontSize: '11px', color: 'var(--ink-soft)', marginTop: '1px' }}>
-                                    Order placed — not yet at the CAD step
+                                    Order placed — no steps completed yet
                                 </div>
                             </div>
                             <div className="status-board-actions">
@@ -289,7 +289,7 @@ export default function Status({ new_jobs, sent_to_cad, awaiting_approval, danie
                                 <div>
                                     <div className="status-board-title">Sent to CAD</div>
                                     <div style={{ fontSize: '11px', color: 'var(--ink-soft)', marginTop: '1px' }}>
-                                        At the CAD step or diamonds delivered
+                                        Started — awaiting CAD design back
                                     </div>
                                 </div>
                                 <div className="status-board-actions">
