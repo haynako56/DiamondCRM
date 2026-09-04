@@ -498,6 +498,7 @@ input[type=text],
 input[type=email],
 input[type=password],
 input[type=date],
+input[type=search],
 select,
 textarea {
   width: 100%;
@@ -517,6 +518,21 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--gold);
+}
+
+/* Search boxes sit on their own in a toolbar, so they carry a stronger border */
+.search-input {
+  border: 1.5px solid var(--border-strong);
+  background-color: var(--white);
+}
+
+.search-input::placeholder {
+  color: var(--ink-soft);
+}
+
+.search-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(166, 124, 82, 0.15);
 }
 
 /* ── Due date label pills ────────────────────────── */

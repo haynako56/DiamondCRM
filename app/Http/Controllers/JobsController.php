@@ -481,13 +481,18 @@ class JobsController extends Controller
         ]);
     }
 
-    public function completed(): Response
+    public function completed(Request $request): Response
     {
+        $search = trim((string) $request->query('search', ''));
+
         $orders = Order::with('lineItems', 'tasks', 'orderNotes', 'salesperson')
             ->where('status', 'completed')
-            ->where('is_archived', false)
+            // Archived orders stay hidden until they are searched for
+            ->when($search === '', fn ($query) => $query->where('is_archived', false))
+            ->when($search !== '', fn ($query) => $this->applyCompletedSearch($query, $search))
             ->latest('woocommerce_created_at')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         $reportJobs = $orders->getCollection()->map(function (Order $order) {
             $firstLineItem = $order->lineItems->first();
@@ -509,6 +514,7 @@ class JobsController extends Controller
                 'tracking'            => $dispatchTask?->tracking_ref ?? '',
                 'notes'               => $order->orderNotes->first()?->content ?? '',
                 'status'              => $order->status,
+                'is_archived'         => (bool) $order->is_archived,
             ];
         });
 
@@ -524,6 +530,7 @@ class JobsController extends Controller
             'jobs'       => $reportJobs,
             'full_jobs'  => $fullJobs,
             'stats'      => $stats,
+            'filters'    => ['search' => $search],
             'pagination' => [
                 'current_page' => $orders->currentPage(),
                 'last_page'    => $orders->lastPage(),
@@ -535,9 +542,30 @@ class JobsController extends Controller
         ]);
     }
 
+    /**
+     * Search completed orders by order code, client, email or product.
+     */
+    private function applyCompletedSearch($query, string $search)
+    {
+        $like = '%' . $search . '%';
+
+        return $query->where(function ($searchQuery) use ($like) {
+            $searchQuery->where('dg_order_code', 'like', $like)
+                ->orWhere('woocommerce_order_id', 'like', $like)
+                ->orWhere('product_name', 'like', $like)
+                ->orWhere('billing->email', 'like', $like)
+                ->orWhereRaw(
+                    "CONCAT(JSON_UNQUOTE(JSON_EXTRACT(billing, '$.first_name')), ' ', JSON_UNQUOTE(JSON_EXTRACT(billing, '$.last_name'))) LIKE ?",
+                    [$like]
+                )
+                ->orWhereHas('lineItems', fn ($lineItems) => $lineItems->where('product_name', 'like', $like));
+        });
+    }
+
     public function reopen(Order $order): RedirectResponse
     {
-        $order->update(['status' => 'processing']);
+        // Reopening pulls the order back into the open list, so it cannot stay archived
+        $order->update(['status' => 'processing', 'is_archived' => false]);
 
         return redirect()->route('jobs.index');
     }

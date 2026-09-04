@@ -22,6 +22,7 @@ interface CompletedJob {
     tracking:            string | null;
     notes:               string;
     status:              string;
+    is_archived:         boolean;
 }
 
 interface Pagination {
@@ -37,6 +38,7 @@ interface Props {
     jobs:       CompletedJob[];
     full_jobs:  any[];
     pagination: Pagination;
+    filters:    { search: string };
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -48,8 +50,27 @@ const CATEGORY_LABELS: Record<string, string> = {
     custom:           'Custom',
 };
 
-export default function Completed({ jobs, full_jobs, pagination }: Props) {
+export default function Completed({ jobs, full_jobs, pagination, filters }: Props) {
     const [selectedJob, setSelectedJob] = useState<any | null>(null);
+    const [searchQuery, setSearchQuery] = useState(filters.search ?? '');
+
+    // Ask the server for matches as the user types — the list is paginated,
+    // so filtering on the client would only ever search the current page
+    useEffect(() => {
+        if (searchQuery === (filters.search ?? '')) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            router.get('/jobs/completed', searchQuery ? { search: searchQuery } : {}, {
+                preserveState:  true,
+                preserveScroll: true,
+                replace:        true,
+            });
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery, filters.search]);
 
     const openPanel = (dbId: number) => {
         if (selectedJob?.id === dbId) {
@@ -71,7 +92,7 @@ export default function Completed({ jobs, full_jobs, pagination }: Props) {
     };
 
     const goToPage = (page: number) => {
-        router.get('/jobs/completed', { page }, { preserveScroll: true });
+        router.get('/jobs/completed', searchQuery ? { page, search: searchQuery } : { page }, { preserveScroll: true });
     };
 
     return (
@@ -79,11 +100,21 @@ export default function Completed({ jobs, full_jobs, pagination }: Props) {
             <Head title="Completed Orders" />
             <div className="topbar">
                 <h1 className="topbar-title">Completed Orders</h1>
-                {pagination.from !== null && (
-                    <span style={{ fontSize: '12px', color: 'var(--ink-soft)' }}>
-                        {pagination.from}–{pagination.to} of {pagination.total} orders
-                    </span>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto' }}>
+                    {pagination.from !== null && (
+                        <span style={{ fontSize: '12px', color: 'var(--ink-soft)' }}>
+                            {pagination.from}–{pagination.to} of {pagination.total} orders
+                        </span>
+                    )}
+                    <input
+                        type="search"
+                        className="search-input"
+                        placeholder="Search completed & archived…"
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        style={{ width: '240px', marginBottom: 0 }}
+                    />
+                </div>
             </div>
 
             <div className="content-scroll">
@@ -92,7 +123,7 @@ export default function Completed({ jobs, full_jobs, pagination }: Props) {
                     {jobs.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ink-soft)' }}>
                             <div style={{ fontSize: '36px', opacity: 0.2, marginBottom: '10px' }}>✓</div>
-                            <p>No completed orders yet.</p>
+                            <p>{searchQuery ? `No completed or archived orders match “${searchQuery}”.` : 'No completed orders yet.'}</p>
                         </div>
                     ) : (
                         <>
@@ -115,6 +146,9 @@ export default function Completed({ jobs, full_jobs, pagination }: Props) {
                                             </div>
                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
                                                 <span style={{ fontSize: '10px', background: 'var(--green-bg)', color: 'var(--green)', padding: '3px 9px', borderRadius: '20px', fontWeight: 500 }}>✓ Completed</span>
+                                                {job.is_archived && (
+                                                    <span style={{ fontSize: '10px', background: 'var(--surface-3)', color: 'var(--ink-mid)', padding: '3px 9px', borderRadius: '20px', fontWeight: 500 }}>Archived</span>
+                                                )}
                                                 <span style={{ fontSize: '10px', color: 'var(--ink-soft)' }}>{categoryLabel}</span>
                                             </div>
                                         </div>
@@ -149,13 +183,15 @@ export default function Completed({ jobs, full_jobs, pagination }: Props) {
                                             <button className="btn btn-sm" onClick={() => reopenJob(job)}>
                                                 ↩ Reopen
                                             </button>
-                                            <button
-                                                className="btn btn-sm"
-                                                onClick={() => archiveJob(job)}
-                                                style={{ marginLeft: 'auto', color: 'var(--ink-soft)' }}
-                                            >
-                                                Archive
-                                            </button>
+                                            {!job.is_archived && (
+                                                <button
+                                                    className="btn btn-sm"
+                                                    onClick={() => archiveJob(job)}
+                                                    style={{ marginLeft: 'auto', color: 'var(--ink-soft)' }}
+                                                >
+                                                    Archive
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                     {isSelected && (

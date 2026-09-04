@@ -126,10 +126,11 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                 </div>
                 <input
                     type="search"
+                    className="search-input"
                     placeholder="Search client, product, order…"
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
-                    style={{ width: '220px', marginBottom: 0 }}
+                    style={{ width: '240px', marginBottom: 0 }}
                 />
             </div>
 
