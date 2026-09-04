@@ -77,6 +77,8 @@ h1, h2, h3, h4, h5, h6 {
 .badge-paid { background-color: var(--green-bg); color: var(--green); }
 .badge-deposit { background-color: var(--amber-bg); color: var(--amber); }
 .badge-unpaid { background-color: var(--red-bg); color: var(--red); }
+.badge-completed { background-color: var(--green-bg); color: var(--green); }
+.badge-archived { background-color: var(--surface-3); color: var(--ink-mid); }
 
 .due-ok { color: var(--ink-soft); }
 .due-soon { color: var(--amber); }

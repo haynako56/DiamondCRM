@@ -1,3 +1,4 @@
+import { router } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 import JobPanel from '@/components/jobs/job-panel';
 
@@ -62,6 +63,11 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
         return taskSteps(job).some((step: any) => !step.done) && !job.completed;
     };
 
+    const reopenJob = (job: any) => {
+        if (!confirm(`Reopen ${job.job_id} — ${job.client}? It will move back to Open Orders.`)) return;
+        router.patch(`/orders/${job.id}/reopen`, {}, { preserveScroll: true });
+    };
+
     const matchesSearch = (job: any): boolean => {
         if (!searchQuery) return true;
         const query = searchQuery.toLowerCase();
@@ -76,7 +82,8 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
 
     const filteredJobs = jobs.filter((job: any) => {
         if (!matchesSearch(job)) return false;
-        if (currentFilter === 'all')       return !job.completed;
+        // A search under "All" also reaches completed and archived jobs
+        if (currentFilter === 'all')       return searchQuery ? true : !job.completed;
         if (currentFilter === 'ring')      return job.type === 'ring' && !job.completed;
         if (currentFilter === 'jewellery') return job.type === 'jewellery' && !job.completed;
         if (currentFilter === 'action')    return needsAction(job);
@@ -179,6 +186,8 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                                         </div>
                                         <span className={`badge ${badge.cls}`}>{badge.label}</span>
                                         {atCollection && <span className="badge badge-collection">📦 Collection / Dispatch</span>}
+                                        {job.completed && <span className="badge badge-completed">✓ Completed</span>}
+                                        {job.is_archived && <span className="badge badge-archived">Archived</span>}
                                     </div>
                                 </div>
 
@@ -261,9 +270,16 @@ export default function JobsList({ jobs, stats, currentFilter, setCurrentFilter,
                                     </div>
                                 )}
 
-                                <button className="drop-open-btn" onClick={(event) => { event.stopPropagation(); onSelectJob(isSelected ? null : job); }}>
-                                    {isSelected ? '✕ Close details' : 'Open full details →'}
-                                </button>
+                                <div style={{ display: 'flex', gap: '7px', alignItems: 'center' }}>
+                                    <button className="drop-open-btn" onClick={(event) => { event.stopPropagation(); onSelectJob(isSelected ? null : job); }}>
+                                        {isSelected ? '✕ Close details' : 'Open full details →'}
+                                    </button>
+                                    {(job.completed || job.is_archived) && (
+                                        <button className="btn btn-sm" onClick={(event) => { event.stopPropagation(); reopenJob(job); }}>
+                                            ↩ Reopen
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                         {isSelected && (

@@ -778,6 +778,7 @@ class JobsController extends Controller
             'tasks'                => $order->tasks,
             'custom_tasks'         => [],
             'completed'            => $order->status === 'completed',
+            'is_archived'          => (bool) $order->is_archived,
             'status'               => $order->status,
             'date_paid'            => $order->date_paid?->toDateString(),
             'created_at'           => $order->woocommerce_created_at->toDateString(),
