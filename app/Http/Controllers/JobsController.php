@@ -537,18 +537,20 @@ class JobsController extends Controller
      */
     private function applyCompletedSearch($query, string $search)
     {
-        $like = '%' . $search . '%';
+        // Values pulled out of the billing JSON come back with a binary collation,
+        // so both sides are lower-cased to keep the search case-insensitive
+        $like = '%' . strtolower($search) . '%';
 
         return $query->where(function ($searchQuery) use ($like) {
-            $searchQuery->where('dg_order_code', 'like', $like)
-                ->orWhere('woocommerce_order_id', 'like', $like)
-                ->orWhere('product_name', 'like', $like)
-                ->orWhere('billing->email', 'like', $like)
+            $searchQuery->whereRaw('LOWER(dg_order_code) LIKE ?', [$like])
+                ->orWhereRaw('LOWER(woocommerce_order_id) LIKE ?', [$like])
+                ->orWhereRaw('LOWER(product_name) LIKE ?', [$like])
+                ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(billing, '$.email'))) LIKE ?", [$like])
                 ->orWhereRaw(
-                    "CONCAT(JSON_UNQUOTE(JSON_EXTRACT(billing, '$.first_name')), ' ', JSON_UNQUOTE(JSON_EXTRACT(billing, '$.last_name'))) LIKE ?",
+                    "LOWER(CONCAT(JSON_UNQUOTE(JSON_EXTRACT(billing, '$.first_name')), ' ', JSON_UNQUOTE(JSON_EXTRACT(billing, '$.last_name')))) LIKE ?",
                     [$like]
                 )
-                ->orWhereHas('lineItems', fn ($lineItems) => $lineItems->where('product_name', 'like', $like));
+                ->orWhereHas('lineItems', fn ($lineItems) => $lineItems->whereRaw('LOWER(product_name) LIKE ?', [$like]));
         });
     }
 
