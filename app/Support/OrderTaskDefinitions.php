@@ -43,6 +43,7 @@ class OrderTaskDefinitions
             ['key' => 'job_packed',          'label' => 'Job Packed to Daniele',    'description' => 'Pack the job and send to Daniele for production.'],
             ['key' => 'production',          'label' => 'Production at Daniele',    'description' => 'In-house production and setting by Daniele.'],
             ['key' => 'collection_dispatch', 'label' => 'Collection / Dispatch',    'description' => 'Collect from showroom or dispatch to client.'],
+            ['key' => 'insurance',           'label' => 'Insurance',                'description' => 'Arrange insurance for the finished piece.'],
         ];
     }
 
@@ -53,6 +54,7 @@ class OrderTaskDefinitions
             ['key' => 'production',          'label' => 'Production at Daniele',  'description' => 'In-house production and setting by Daniele.'],
             ['key' => 'awaiting_collection', 'label' => 'Awaiting Collection',    'description' => 'Job is complete and ready for client collection or dispatch.'],
             ['key' => 'collection_dispatch', 'label' => 'Collection / Dispatch',  'description' => 'Collect from showroom or dispatch to client.'],
+            ['key' => 'insurance',           'label' => 'Insurance',              'description' => 'Arrange insurance for the finished piece.'],
         ];
     }
 
@@ -62,6 +64,7 @@ class OrderTaskDefinitions
             ['key' => 'supplier_order',      'label' => 'Order from supplier',  'description' => 'Place order and confirm ETA.'],
             ['key' => 'delivery_confirmed',  'label' => 'Delivery confirmed',   'description' => 'Mark when item arrives in store.'],
             ['key' => 'collection_dispatch', 'label' => 'Collection / Dispatch','description' => 'Collect from showroom or dispatch to client.'],
+            ['key' => 'insurance',           'label' => 'Insurance',            'description' => 'Arrange insurance for the finished piece.'],
         ];
     }
 
@@ -72,6 +75,7 @@ class OrderTaskDefinitions
             ['key' => 'production',          'label' => 'Production at Daniele',  'description' => 'Resize and finish the ring.'],
             ['key' => 'awaiting_collection', 'label' => 'Awaiting Collection',    'description' => 'Job is complete and ready for client collection or dispatch.'],
             ['key' => 'collection_dispatch', 'label' => 'Collection / Dispatch',  'description' => 'Collect from showroom or dispatch to client.'],
+            ['key' => 'insurance',           'label' => 'Insurance',              'description' => 'Arrange insurance for the finished piece.'],
         ];
     }
 
@@ -82,6 +86,7 @@ class OrderTaskDefinitions
             ['key' => 'production',          'label' => 'Production at Daniele',  'description' => 'Carry out the repair.'],
             ['key' => 'awaiting_collection', 'label' => 'Awaiting Collection',    'description' => 'Job is complete and ready for client collection or dispatch.'],
             ['key' => 'collection_dispatch', 'label' => 'Collection / Dispatch',  'description' => 'Collect from showroom or dispatch to client.'],
+            ['key' => 'insurance',           'label' => 'Insurance',              'description' => 'Arrange insurance for the finished piece.'],
         ];
     }
 }

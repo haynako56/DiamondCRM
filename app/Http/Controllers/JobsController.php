@@ -396,6 +396,7 @@ class JobsController extends Controller
             'production'          => ['color' => '#2D6A4F', 'bg' => '#E8F4EE'],
             'awaiting_collection' => ['color' => '#E67E22', 'bg' => '#FFF0DC'],
             'collection_dispatch' => ['color' => '#2D6A4F', 'bg' => '#E8F4EE'],
+            'insurance'           => ['color' => '#4A3A9A', 'bg' => '#F0EDFB'],
             'supplier_order'      => ['color' => '#92600A', 'bg' => '#FEF3E2'],
             'delivery_confirmed'  => ['color' => '#92600A', 'bg' => '#FEF3E2'],
         ];
