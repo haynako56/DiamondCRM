@@ -6,6 +6,7 @@ use App\Support\OrderTaskDefinitions;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
@@ -77,6 +78,11 @@ class Order extends Model
     public function salesperson(): BelongsTo
     {
         return $this->belongsTo(User::class, 'salesperson_id');
+    }
+
+    public function finance(): HasOne
+    {
+        return $this->hasOne(OrderFinance::class);
     }
 
     // -------------------------------------------------------------------------
@@ -186,6 +192,26 @@ class Order extends Model
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * Every order carries one finance record. Runs automatically when an
+     * order is created (see booted) so no sync or import path can miss it.
+     */
+    public function createFinanceRecord(): OrderFinance
+    {
+        $finance = $this->finance()->firstOrCreate([]);
+
+        if ($finance->costs()->doesntExist()) {
+            $finance->createDefaultCosts();
+        }
+
+        return $finance;
+    }
+
+    protected static function booted(): void
+    {
+        static::created(fn (Order $order) => $order->createFinanceRecord());
+    }
 
     public function createDefaultTasks(string $method): void
     {

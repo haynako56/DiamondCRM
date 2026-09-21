@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 use App\Http\Controllers\OrderNoteController;
 use App\Http\Controllers\OrderTaskController;
+use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\JobsController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\UsersController;
@@ -47,6 +48,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/jobs/completed', [JobsController::class, 'completed'])->name('jobs.completed');
     Route::patch('/orders/{order}/reopen',   [JobsController::class, 'reopen'])->name('jobs.reopen');
     Route::patch('/orders/{order}/complete', [JobsController::class, 'complete'])->name('jobs.complete');
+
+    // Finance
+    Route::get('/finance',                        [FinanceController::class, 'index'])->name('finance.index');
+    Route::patch('/finance/{finance}',            [FinanceController::class, 'update'])->name('finance.update');
+    Route::post('/finance/{finance}/costs',       [FinanceController::class, 'storeCost'])->name('finance.costs.store');
+    Route::patch('/finance/costs/{cost}',         [FinanceController::class, 'updateCost'])->name('finance.costs.update');
+    Route::delete('/finance/costs/{cost}',        [FinanceController::class, 'destroyCost'])->name('finance.costs.destroy');
 
     Route::get('/settings/users',       [UsersController::class, 'index'])->name('settings.users');
     Route::post('/settings/users',      [UsersController::class, 'store'])->name('settings.users.store');
